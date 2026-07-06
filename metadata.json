@@ -1,0 +1,6 @@
+{
+  "name": "zWallet",
+  "description": "Next-gen multi-chain Web3 wallet with secure key management, AI agent automated trading, cross-chain bridge, DApp browser, and portfolio analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
