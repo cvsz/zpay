@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [AssetBalance::class, CryptoTransaction::class, PriceAlert::class, EncryptedKey::class],
-    version = 1,
+    entities = [AssetBalance::class, CryptoTransaction::class, PriceAlert::class, EncryptedKey::class, AITradingRule::class],
+    version = 2,
     exportSchema = false
 )
 abstract class WalletDatabase : RoomDatabase() {

@@ -48,3 +48,16 @@ data class EncryptedKey(
     val iv: String, // Initialization vector for decryption
     val dateGenerated: Long = System.currentTimeMillis()
 )
+
+@Entity(tableName = "ai_trading_rules")
+data class AITradingRule(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val assetSymbol: String, // BTC, ETH, SOL, BNB
+    val actionType: String, // BUY, SELL
+    val triggerCondition: String, // PRICE_ABOVE, PRICE_BELOW, SENTIMENT_BULLISH, SENTIMENT_BEARISH
+    val targetThreshold: Double, // target price or sentiment score
+    val tradeAmountCrypto: Double, // amount in crypto
+    val isEnabled: Boolean = true,
+    val dateCreated: Long = System.currentTimeMillis(),
+    val lastTriggered: Long? = null
+)

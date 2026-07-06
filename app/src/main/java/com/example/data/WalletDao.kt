@@ -50,4 +50,20 @@ interface WalletDao {
 
     @Query("DELETE FROM encrypted_keys")
     suspend fun clearAllKeys()
+
+    // --- AI Trading Rules ---
+    @Query("SELECT * FROM ai_trading_rules ORDER BY dateCreated DESC")
+    fun getAllTradingRules(): Flow<List<AITradingRule>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTradingRule(rule: AITradingRule)
+
+    @Query("UPDATE ai_trading_rules SET isEnabled = :enabled WHERE id = :id")
+    suspend fun toggleTradingRule(id: Long, enabled: Boolean)
+
+    @Query("UPDATE ai_trading_rules SET lastTriggered = :timestamp WHERE id = :id")
+    suspend fun updateRuleTriggered(id: Long, timestamp: Long)
+
+    @Query("DELETE FROM ai_trading_rules WHERE id = :id")
+    suspend fun deleteTradingRule(id: Long)
 }

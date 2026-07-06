@@ -103,4 +103,23 @@ class WalletRepository(private val dao: WalletDao) {
     suspend fun removeAlert(id: Long) {
         dao.deletePriceAlert(id)
     }
+
+    // --- AI Trading Rules ---
+    val aiTradingRules: Flow<List<AITradingRule>> = dao.getAllTradingRules()
+
+    suspend fun saveTradingRule(rule: AITradingRule) {
+        dao.insertTradingRule(rule)
+    }
+
+    suspend fun toggleTradingRule(id: Long, enabled: Boolean) {
+        dao.toggleTradingRule(id, enabled)
+    }
+
+    suspend fun updateRuleTriggered(id: Long, timestamp: Long) {
+        dao.updateRuleTriggered(id, timestamp)
+    }
+
+    suspend fun deleteTradingRule(id: Long) {
+        dao.deleteTradingRule(id)
+    }
 }

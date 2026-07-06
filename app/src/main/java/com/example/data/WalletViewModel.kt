@@ -72,6 +72,9 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     val priceAlerts: StateFlow<List<PriceAlert>> = repository.allAlerts
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val aiTradingRules: StateFlow<List<AITradingRule>> = repository.aiTradingRules
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
         viewModelScope.launch {
             // Check if database is populated, if not fill with starting multi-chain asset allocations
@@ -82,6 +85,8 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 generateNewSecureWallet()
             }
             startPriceAlertMonitoring()
+            startAITradingMonitoring()
+            startPriceTickerSimulation()
             addNotification("Secure app linking active for zwallet.zeaz.dev domain.")
         }
     }
@@ -233,8 +238,14 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 repository.saveBalance(fromAsset.copy(balance = fromAsset.balance - amount))
             }
             if (toAsset != null) {
-                // rough simulated conversion rate
-                val conversionRate = if (fromSymbol == "ETH" && toSymbol == "BNB") 5.7 else 1.0
+                // calculate dynamic conversion rate using current USD prices
+                val conversionRate = if (fromAsset != null && fromAsset.priceUsd > 0 && toAsset.priceUsd > 0) {
+                    fromAsset.priceUsd / toAsset.priceUsd
+                } else if (fromSymbol == "ETH" && toSymbol == "BNB") {
+                    5.7
+                } else {
+                    1.0
+                }
                 val received = amount * conversionRate
                 repository.saveBalance(toAsset.copy(balance = toAsset.balance + received))
             }
@@ -245,8 +256,16 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                     chain = "$fromChain → $toChain",
                     hash = "0xbridge_" + UUID.randomUUID().toString().substring(0, 12),
                     type = "Bridge",
-                    fromAddress = if (fromChain == "Solana") solAddress else ethAddress,
-                    toAddress = if (toChain == "Solana") solAddress else ethAddress,
+                    fromAddress = when (fromChain) {
+                        "Solana" -> solAddress
+                        "Bitcoin" -> btcAddress
+                        else -> ethAddress
+                    },
+                    toAddress = when (toChain) {
+                        "Solana" -> solAddress
+                        "Bitcoin" -> btcAddress
+                        else -> ethAddress
+                    },
                     amount = amount,
                     feeUsd = if (fromChain == "Ethereum") 15.20 else 2.10,
                     status = "Success",
@@ -419,6 +438,146 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                     if (triggerConditionMet) {
                         repository.triggerAlert(alert.id)
                         addNotification("🚨 HIGH VOLATILITY ALERT: ${alert.symbol} has gone ${alert.direction.lowercase()} $$ ${alert.targetPrice}! Currently at $${currentAsset.priceUsd}")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun startPriceTickerSimulation() {
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(10000) // update prices every 10 seconds
+                val currentBalances = assetBalances.value
+                for (asset in currentBalances) {
+                    // Slight fluctuation between -0.3% and +0.3%
+                    val percentChange = ((-30..30).random().toDouble() / 100.0)
+                    val newPrice = (asset.priceUsd * (1.0 + percentChange / 100.0)).coerceAtLeast(1.0)
+                    val newPriceChange = asset.priceChange24h + percentChange
+                    repository.saveBalance(asset.copy(priceUsd = newPrice, priceChange24h = newPriceChange))
+                }
+            }
+        }
+    }
+
+    // --- AI Automated Trading rules management ---
+    fun createTradingRule(
+        symbol: String,
+        action: String,
+        condition: String,
+        threshold: Double,
+        amount: Double
+    ) {
+        viewModelScope.launch {
+            val rule = AITradingRule(
+                assetSymbol = symbol,
+                actionType = action,
+                triggerCondition = condition,
+                targetThreshold = threshold,
+                tradeAmountCrypto = amount
+            )
+            repository.saveTradingRule(rule)
+            addNotification("🤖 AI Agent configured: Auto-$action $amount $symbol when $condition ($threshold)")
+        }
+    }
+
+    fun toggleTradingRule(id: Long, enabled: Boolean) {
+        viewModelScope.launch {
+            repository.toggleTradingRule(id, enabled)
+            addNotification("AI Trading Rule ${if (enabled) "enabled" else "disabled"}.")
+        }
+    }
+
+    fun deleteTradingRule(id: Long) {
+        viewModelScope.launch {
+            repository.deleteTradingRule(id)
+            addNotification("AI Trading Rule deleted.")
+        }
+    }
+
+    private fun startAITradingMonitoring() {
+        viewModelScope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(12000) // check rules periodically
+                val rules = db.walletDao().getAllTradingRules().firstOrNull() ?: continue
+                val currentBalances = assetBalances.value
+                val sentiment = marketSentimentResult.value ?: ""
+
+                for (rule in rules) {
+                    if (!rule.isEnabled) continue
+                    
+                    // Prevent immediate double triggering (e.g., cooldown of 1 minute)
+                    if (rule.lastTriggered != null && System.currentTimeMillis() - rule.lastTriggered < 60000) {
+                        continue
+                    }
+
+                    val currentAsset = currentBalances.find { it.symbol == rule.assetSymbol } ?: continue
+                    var conditionMet = false
+
+                    when (rule.triggerCondition) {
+                        "PRICE_ABOVE" -> {
+                            if (currentAsset.priceUsd >= rule.targetThreshold) {
+                                conditionMet = true
+                            }
+                        }
+                        "PRICE_BELOW" -> {
+                            if (currentAsset.priceUsd <= rule.targetThreshold) {
+                                conditionMet = true
+                            }
+                        }
+                        "SENTIMENT_BULLISH" -> {
+                            if (sentiment.uppercase().contains("BULLISH") || sentiment.uppercase().contains("POSITIVE")) {
+                                conditionMet = true
+                            }
+                        }
+                        "SENTIMENT_BEARISH" -> {
+                            if (sentiment.uppercase().contains("BEARISH") || sentiment.uppercase().contains("NEGATIVE")) {
+                                conditionMet = true
+                            }
+                        }
+                    }
+
+                    if (conditionMet) {
+                        // Execute the trade!
+                        val updatedBalance = if (rule.actionType == "BUY") {
+                            currentAsset.balance + rule.tradeAmountCrypto
+                        } else {
+                            (currentAsset.balance - rule.tradeAmountCrypto).coerceAtLeast(0.0)
+                        }
+
+                        // Save updated balance
+                        repository.saveBalance(currentAsset.copy(balance = updatedBalance))
+
+                        // Update the last triggered timestamp
+                        repository.updateRuleTriggered(rule.id, System.currentTimeMillis())
+
+                        // Log Transaction
+                        val chainName = when (rule.assetSymbol) {
+                            "BTC" -> "Bitcoin"
+                            "ETH" -> "Ethereum"
+                            "SOL" -> "Solana"
+                            else -> "BSC"
+                        }
+                        repository.saveTransaction(
+                            CryptoTransaction(
+                                chain = chainName,
+                                hash = "0xaitrade_" + UUID.randomUUID().toString().substring(0, 12),
+                                type = if (rule.actionType == "BUY") "AI Auto-Buy" else "AI Auto-Sell",
+                                fromAddress = "AI Algorithmic Engine",
+                                toAddress = when (rule.assetSymbol) {
+                                    "BTC" -> btcAddress
+                                    "SOL" -> solAddress
+                                    else -> ethAddress
+                                },
+                                amount = rule.tradeAmountCrypto,
+                                feeUsd = 1.50,
+                                status = "Success",
+                                timestamp = System.currentTimeMillis(),
+                                notes = "Automated execution triggered by: ${rule.triggerCondition} at threshold ${rule.targetThreshold}"
+                            )
+                        )
+
+                        addNotification("🤖 AI AGENT TRIGGERED: Automated ${rule.actionType} of ${rule.tradeAmountCrypto} ${rule.assetSymbol} executed successfully! Trigger rule: ${rule.triggerCondition} threshold ${rule.targetThreshold} met.")
                     }
                 }
             }
