@@ -64,6 +64,16 @@ def main() -> int:
     require("repository.saveTradingRule" not in view_model, "demo mode must not persist active trading rules")
     require("repository.saveBalance" not in view_model, "demo view model must not mutate balances anywhere")
     require("repository.saveTransaction" not in view_model, "demo view model must not create transaction records anywhere")
+    require("GeminiService." not in view_model, "demo view model must not call the disabled AI client")
+    require("AI Trading Agent proposed execution strategy." not in view_model, "demo view model must not claim to generate trading strategies")
+    gas_method = function_block(
+        view_model,
+        "    fun refreshGasEstimation(",
+        "    /**\\n     * Cross-Chain Bridge Swap execution.",
+    )
+    require(".random()" not in gas_method, "gas estimates must not be fabricated with random values")
+    require("_gasEthGwei.value = 0.0" in gas_method, "ETH gas estimate must remain unavailable")
+    require("_gasSolFee.value = 0.0" in gas_method, "SOL gas estimate must remain unavailable")
 
     topup_method = function_block(
         view_model,
@@ -108,6 +118,12 @@ def main() -> int:
     require("No verified deposit addresses are configured." in screens, "receive action must warn against deposits")
     require("AUTOMATED TRADING DISABLED" in screens, "trading controls must be replaced with a disabled notice")
     require("DEPLOY ALGORITHMIC RULE" not in screens, "demo UI must not offer automated rule deployment")
+    require("AI FEATURES DISABLED" in screens, "AI screen must disclose disabled AI functionality")
+    for marker in ("TRADING WITH AI AGENTS", "REFRESH MARKET SENTIMENT SCORE", "RUN ALGORITHMIC ANALYSIS", "server-side Gemini intelligence models"):
+        require(marker not in screens, f"AI screen still presents unavailable capability: {marker}")
+    require("GAS FEE ESTIMATION DISABLED" in screens, "bridge screen must disclose unavailable network fee estimates")
+    for marker in ("ERC-20 Bridge Link", "SPL Wormhole Portal", "tBTC Native Custody", "BSC TokenBridge Gateway", "Estimated Toll Cost", "INITIATE CRYPTOGRAPHIC BRIDGE"):
+        require(marker not in screens, f"bridge screen still presents an unverified route or fee: {marker}")
 
     readme = read("README.md")
     require("DEMO BUILD ONLY" in readme or "Demo Build Only" in readme, "README must disclose non-production status")
@@ -118,7 +134,7 @@ def main() -> int:
             print(f"FAIL: {failure}", file=sys.stderr)
         return 1
 
-    print("PASS: wallet demo has no client API key, payment collection, simulated settlement, or configured deposit address.")
+    print("PASS: wallet demo disables custody, payment, bridge, AI trading, fabricated gas estimates, and client credentials.")
     return 0
 
 
