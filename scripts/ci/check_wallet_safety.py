@@ -58,6 +58,10 @@ def main() -> int:
     require('val ethAddress = "NOT_CONFIGURED"' in view_model, "EVM deposit address must remain unconfigured")
     require('val solAddress = "NOT_CONFIGURED"' in view_model, "SOL deposit address must remain unconfigured")
     require("startPriceTickerSimulation" not in view_model, "demo price simulation must not mutate portfolio balances")
+    require("repository.saveBalance" not in view_model, "view model must not mutate portfolio balances in demo mode")
+    require("repository.saveTransaction" not in view_model, "view model must not fabricate transaction records in demo mode")
+    require("startAITradingMonitoring" not in view_model, "automated trading monitor must remain disabled")
+    require("repository.saveTradingRule" not in view_model, "demo mode must not persist active trading rules")
 
     topup_method = function_block(
         view_model,
