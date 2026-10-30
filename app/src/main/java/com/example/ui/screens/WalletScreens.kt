@@ -585,7 +585,7 @@ fun DashboardScreen(viewModel: WalletViewModel) {
     ) {
         item {
             Text(
-                text = "DEMO BUILD ONLY — balances and market data are simulated. No custody, deposit, withdrawal, swap, or payment service is connected.",
+                text = "DEMO BUILD ONLY — balances and market data are simulated. No custody, deposit, withdrawal, swap, payment, or automated trading service is connected.",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = VolatilityPink,
