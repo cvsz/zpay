@@ -300,22 +300,6 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun startPriceTickerSimulation() {
-        viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(10000) // update prices every 10 seconds
-                val currentBalances = assetBalances.value
-                for (asset in currentBalances) {
-                    // Slight fluctuation between -0.3% and +0.3%
-                    val percentChange = ((-30..30).random().toDouble() / 100.0)
-                    val newPrice = (asset.priceUsd * (1.0 + percentChange / 100.0)).coerceAtLeast(1.0)
-                    val newPriceChange = asset.priceChange24h + percentChange
-                    repository.saveBalance(asset.copy(priceUsd = newPrice, priceChange24h = newPriceChange))
-                }
-            }
-        }
-    }
-
     // --- AI Automated Trading rules management ---
     fun createTradingRule(
         symbol: String,
