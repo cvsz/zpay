@@ -216,7 +216,7 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = CosmicCyan),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("DECRYPT WALLET", fontWeight = FontWeight.Bold, color = DarkRedGray)
+                    Text("OPEN DEMO DASHBOARD", fontWeight = FontWeight.Bold, color = DarkRedGray)
                 }
             }
         }
@@ -242,7 +242,7 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                 )
             }
             Text(
-                text = "Tap to unlock with Biometrics",
+                text = "Biometric authentication is not configured in this demo",
                 fontSize = 12.sp,
                 color = CosmicCyan,
                 modifier = Modifier.padding(top = 8.dp)
@@ -325,7 +325,7 @@ fun SecureBalanceVaultComponent(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "SECURE ENCLAVE ACTIVE",
+                        text = "DEMO MODE — NO KEY CUSTODY",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = ElectricEmerald,
@@ -479,7 +479,7 @@ fun SecureBalanceVaultComponent(
                                 kotlinx.coroutines.delay(600)
                                 isAuthenticating = false
                                 showAddresses = true
-                                Toast.makeText(context, "Secure Decryption Successful via Keystore", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Demo placeholder only; no key was decrypted", Toast.LENGTH_SHORT).show()
                             }
                         } else {
                             showAddresses = false
@@ -503,7 +503,7 @@ fun SecureBalanceVaultComponent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (showAddresses) "HIDE WALLET ADDRESSES" else "REVEAL SECURE ADDRESSES",
+                        text = if (showAddresses) "HIDE WALLET ADDRESSES" else "SHOW DEMO PLACEHOLDERS",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (showAddresses) TextWhite else BackgroundDark
@@ -583,6 +583,16 @@ fun DashboardScreen(viewModel: WalletViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item {
+            Text(
+                text = "DEMO BUILD ONLY — balances and market data are simulated. No custody, deposit, withdrawal, swap, or payment service is connected.",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = VolatilityPink,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         // Top Premium Secure Balance Card with Expandable Addresses
         item {
             SecureBalanceVaultComponent(
@@ -606,7 +616,7 @@ fun DashboardScreen(viewModel: WalletViewModel) {
                     icon = Icons.Default.ArrowUpward,
                     label = "SEND",
                     onClick = {
-                        Toast.makeText(context, "Secure outbox active. Select asset below to withdraw.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Transfers are disabled in this demo build.", Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -614,14 +624,14 @@ fun DashboardScreen(viewModel: WalletViewModel) {
                     icon = Icons.Default.ArrowDownward,
                     label = "RECEIVE",
                     onClick = {
-                        Toast.makeText(context, "Click 'REVEAL SECURE ADDRESSES' on the portfolio card to view deposit details.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "No verified deposit addresses are configured. Do not send funds.", Toast.LENGTH_LONG).show()
                     }
                 )
 
                 QuickActionButton(
                     icon = Icons.Default.SwapHoriz,
                     label = "SWAP",
-                    onClick = { viewModel.navigateTo("swap") }
+                    onClick = { Toast.makeText(context, "Swaps are disabled in this demo build.", Toast.LENGTH_SHORT).show() }
                 )
 
                 QuickActionButton(
