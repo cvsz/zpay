@@ -152,12 +152,10 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     /**
      * Estimates gas based on user input, updating routing values dynamically
      */
+    @Suppress("UNUSED_PARAMETER")
     fun refreshGasEstimation(chain: String) {
-        if (chain == "Ethereum" || chain == "BSC") {
-            _gasEthGwei.value = (20..45).random().toDouble()
-        } else if (chain == "Solana") {
-            _gasSolFee.value = 0.00005 + (0..10).random() * 0.00001
-        }
+        _gasEthGwei.value = 0.0
+        _gasSolFee.value = 0.0
     }
 
     /**
@@ -178,54 +176,19 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
      * Triggers the Gemini AI Sentiment analysis on cryptocurrency headlines.
      */
     fun fetchMarketSentimentAnalysis() {
-        if (_isAnalyzingSentiment.value) return
-        _isAnalyzingSentiment.value = true
+        _isAnalyzingSentiment.value = false
         _marketSentimentResult.value = null
-
-        viewModelScope.launch {
-            val sampleHeadlines = listOf(
-                "SEC holds positive talks with major Bitcoin ETF providers regarding option listings.",
-                "Ethereum network transaction fees tumble to 4-year low as L2 scaling expands aggressively.",
-                "Solana hits new record high in daily active wallet addresses following DeFi DEX volume breakout.",
-                "Global macroeconomic tensions ease; institutional venture funding inflows to Web3 up 24%."
-            )
-            val result = GeminiService.analyzeNewsSentiment(sampleHeadlines)
-            _marketSentimentResult.value = result
-            _isAnalyzingSentiment.value = false
-            addNotification("AI Sentiment analysis updated.")
-        }
+        addNotification("AI sentiment analysis is disabled; no market data or AI request was performed.")
     }
 
     /**
      * Requests the Gemini AI trading agent to optimize asset allocations based on user holdings.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun runAITradingRebalancer(riskLevel: String) {
-        if (_isRebalancingPortfolio.value) return
-        _isRebalancingPortfolio.value = true
+        _isRebalancingPortfolio.value = false
         _rebalanceStrategyResult.value = null
-
-        viewModelScope.launch {
-            val balances = assetBalances.value
-            val btc = balances.find { it.symbol == "BTC" }
-            val eth = balances.find { it.symbol == "ETH" }
-            val sol = balances.find { it.symbol == "SOL" }
-            val bnb = balances.find { it.symbol == "BNB" }
-
-            val result = GeminiService.rebalancePortfolio(
-                btcBalance = btc?.balance ?: 0.0,
-                btcValue = (btc?.balance ?: 0.0) * (btc?.priceUsd ?: 91520.0),
-                ethBalance = eth?.balance ?: 0.0,
-                ethValue = (eth?.balance ?: 0.0) * (eth?.priceUsd ?: 3340.0),
-                solBalance = sol?.balance ?: 0.0,
-                solValue = (sol?.balance ?: 0.0) * (sol?.priceUsd ?: 184.20),
-                bnbBalance = bnb?.balance ?: 0.0,
-                bnbValue = (bnb?.balance ?: 0.0) * (bnb?.priceUsd ?: 582.60),
-                riskLevel = riskLevel
-            )
-            _rebalanceStrategyResult.value = result
-            _isRebalancingPortfolio.value = false
-            addNotification("AI Trading Agent proposed execution strategy.")
-        }
+        addNotification("AI portfolio recommendations and trading are disabled; no recommendation or order was generated.")
     }
 
     /**
