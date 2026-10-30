@@ -57,6 +57,7 @@ def main() -> int:
     require('val btcAddress = "NOT_CONFIGURED"' in view_model, "BTC deposit address must remain unconfigured")
     require('val ethAddress = "NOT_CONFIGURED"' in view_model, "EVM deposit address must remain unconfigured")
     require('val solAddress = "NOT_CONFIGURED"' in view_model, "SOL deposit address must remain unconfigured")
+    require("startPriceTickerSimulation" not in view_model, "demo price simulation must not mutate portfolio balances")
 
     topup_method = function_block(
         view_model,
