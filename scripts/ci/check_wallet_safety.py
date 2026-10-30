@@ -69,7 +69,7 @@ def main() -> int:
     gas_method = function_block(
         view_model,
         "    fun refreshGasEstimation(",
-        "    /**\\n     * Cross-Chain Bridge Swap execution.",
+        "    /**",
     )
     require(".random()" not in gas_method, "gas estimates must not be fabricated with random values")
     require("_gasEthGwei.value = 0.0" in gas_method, "ETH gas estimate must remain unavailable")
