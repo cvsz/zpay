@@ -122,6 +122,14 @@ def main() -> int:
     for marker in ("TRADING WITH AI AGENTS", "REFRESH MARKET SENTIMENT SCORE", "RUN ALGORITHMIC ANALYSIS", "server-side Gemini intelligence models"):
         require(marker not in screens, f"AI screen still presents unavailable capability: {marker}")
     require("GAS FEE ESTIMATION DISABLED" in screens, "bridge screen must disclose unavailable network fee estimates")
+    bridge_button = function_block(
+        screens,
+        "        // BRIDGE EXECUTION",
+        "        // BRIDGE STATUS NOTIFIER",
+    )
+    require("enabled = false" in bridge_button, "bridge execution button must remain disabled")
+    require("BRIDGE EXECUTION DISABLED" in bridge_button, "bridge execution button must disclose its disabled state")
+    require("viewModel.executeBridgeSwap" not in bridge_button, "demo bridge UI must not invoke execution")
     for marker in ("ERC-20 Bridge Link", "SPL Wormhole Portal", "tBTC Native Custody", "BSC TokenBridge Gateway", "Estimated Toll Cost", "INITIATE CRYPTOGRAPHIC BRIDGE"):
         require(marker not in screens, f"bridge screen still presents an unverified route or fee: {marker}")
 
