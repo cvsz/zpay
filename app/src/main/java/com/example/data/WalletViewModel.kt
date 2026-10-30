@@ -80,7 +80,6 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             // Demo mode must not create wallet keys, balances, or synthetic transactions.
             startPriceAlertMonitoring()
-            startAITradingMonitoring()
             addNotification("DEMO MODE: no wallet keys, payment provider, or on-chain integration is configured.")
         }
     }
@@ -308,119 +307,17 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         threshold: Double,
         amount: Double
     ) {
-        viewModelScope.launch {
-            val rule = AITradingRule(
-                assetSymbol = symbol,
-                actionType = action,
-                triggerCondition = condition,
-                targetThreshold = threshold,
-                tradeAmountCrypto = amount
-            )
-            repository.saveTradingRule(rule)
-            addNotification("🤖 AI Agent configured: Auto-$action $amount $symbol when $condition ($threshold)")
-        }
+        addNotification("Automated trading is disabled in this demo build. No order was created or submitted.")
     }
 
     fun toggleTradingRule(id: Long, enabled: Boolean) {
-        viewModelScope.launch {
-            repository.toggleTradingRule(id, enabled)
-            addNotification("AI Trading Rule ${if (enabled) "enabled" else "disabled"}.")
-        }
+        addNotification("Automated trading rules are inert in this demo build. No order was submitted.")
     }
 
     fun deleteTradingRule(id: Long) {
         viewModelScope.launch {
             repository.deleteTradingRule(id)
             addNotification("AI Trading Rule deleted.")
-        }
-    }
-
-    private fun startAITradingMonitoring() {
-        viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(12000) // check rules periodically
-                val rules = db.walletDao().getAllTradingRules().firstOrNull() ?: continue
-                val currentBalances = assetBalances.value
-                val sentiment = marketSentimentResult.value ?: ""
-
-                for (rule in rules) {
-                    if (!rule.isEnabled) continue
-                    
-                    // Prevent immediate double triggering (e.g., cooldown of 1 minute)
-                    if (rule.lastTriggered != null && System.currentTimeMillis() - rule.lastTriggered < 60000) {
-                        continue
-                    }
-
-                    val currentAsset = currentBalances.find { it.symbol == rule.assetSymbol } ?: continue
-                    var conditionMet = false
-
-                    when (rule.triggerCondition) {
-                        "PRICE_ABOVE" -> {
-                            if (currentAsset.priceUsd >= rule.targetThreshold) {
-                                conditionMet = true
-                            }
-                        }
-                        "PRICE_BELOW" -> {
-                            if (currentAsset.priceUsd <= rule.targetThreshold) {
-                                conditionMet = true
-                            }
-                        }
-                        "SENTIMENT_BULLISH" -> {
-                            if (sentiment.uppercase().contains("BULLISH") || sentiment.uppercase().contains("POSITIVE")) {
-                                conditionMet = true
-                            }
-                        }
-                        "SENTIMENT_BEARISH" -> {
-                            if (sentiment.uppercase().contains("BEARISH") || sentiment.uppercase().contains("NEGATIVE")) {
-                                conditionMet = true
-                            }
-                        }
-                    }
-
-                    if (conditionMet) {
-                        // Execute the trade!
-                        val updatedBalance = if (rule.actionType == "BUY") {
-                            currentAsset.balance + rule.tradeAmountCrypto
-                        } else {
-                            (currentAsset.balance - rule.tradeAmountCrypto).coerceAtLeast(0.0)
-                        }
-
-                        // Save updated balance
-                        repository.saveBalance(currentAsset.copy(balance = updatedBalance))
-
-                        // Update the last triggered timestamp
-                        repository.updateRuleTriggered(rule.id, System.currentTimeMillis())
-
-                        // Log Transaction
-                        val chainName = when (rule.assetSymbol) {
-                            "BTC" -> "Bitcoin"
-                            "ETH" -> "Ethereum"
-                            "SOL" -> "Solana"
-                            else -> "BSC"
-                        }
-                        repository.saveTransaction(
-                            CryptoTransaction(
-                                chain = chainName,
-                                hash = "0xaitrade_" + UUID.randomUUID().toString().substring(0, 12),
-                                type = if (rule.actionType == "BUY") "AI Auto-Buy" else "AI Auto-Sell",
-                                fromAddress = "AI Algorithmic Engine",
-                                toAddress = when (rule.assetSymbol) {
-                                    "BTC" -> btcAddress
-                                    "SOL" -> solAddress
-                                    else -> ethAddress
-                                },
-                                amount = rule.tradeAmountCrypto,
-                                feeUsd = 1.50,
-                                status = "Success",
-                                timestamp = System.currentTimeMillis(),
-                                notes = "Automated execution triggered by: ${rule.triggerCondition} at threshold ${rule.targetThreshold}"
-                            )
-                        )
-
-                        addNotification("🤖 AI AGENT TRIGGERED: Automated ${rule.actionType} of ${rule.tradeAmountCrypto} ${rule.assetSymbol} executed successfully! Trigger rule: ${rule.triggerCondition} threshold ${rule.targetThreshold} met.")
-                    }
-                }
-            }
         }
     }
 }
