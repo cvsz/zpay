@@ -1787,7 +1787,7 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
             }
         }
 
-        // --- GAS ESTIMATION & ROUTING INFO ---
+        // --- GAS ESTIMATION DISABLED ---
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1795,69 +1795,28 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
             colors = CardDefaults.cardColors(containerColor = CardDark),
             shape = RoundedCornerShape(14.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("GAS FEE ESTIMATION & ROUTING", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
-                    IconButton(onClick = { viewModel.refreshGasEstimation(fromChain) }) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh Gas", tint = ElectricEmerald, modifier = Modifier.size(16.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Active Pipeline", fontSize = 10.sp, color = TextGray)
-                        Text(
-                            text = when (fromChain) {
-                                "Ethereum" -> "ERC-20 Bridge Link"
-                                "Solana" -> "SPL Wormhole Portal"
-                                "Bitcoin" -> "tBTC Native Custody"
-                                else -> "BSC TokenBridge Gateway"
-                            },
-                            fontSize = 12.sp,
-                            color = TextWhite,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Estimated Toll Cost", fontSize = 10.sp, color = TextGray)
-                        Text(
-                            text = when (fromChain) {
-                                "Ethereum" -> "~${String.format("%.1f", gasGwei)} Gwei ($${String.format("%.2f", gasGwei * 0.15)})"
-                                "Solana" -> "~${String.format("%.5f", gasSolFee)} SOL ($0.01)"
-                                "Bitcoin" -> "~0.00015 BTC ($13.70)"
-                                else -> "~0.0035 BNB ($2.04)"
-                            },
-                            fontSize = 12.sp,
-                            color = ElectricEmerald,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("GAS FEE ESTIMATION DISABLED", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                Text(
+                    "No verified RPC endpoint or provider quote is configured. Network fees and bridge routes are unavailable in this demo.",
+                    fontSize = 11.sp,
+                    color = TextMuted
+                )
             }
         }
 
-        // EXECUTE SWAP
+        // BRIDGE EXECUTION
         Button(
-            onClick = {
-                val amtValue = amountText.toDoubleOrNull() ?: 1.0
-                viewModel.executeBridgeSwap(fromChain, toChain, fromAsset, toAsset, amtValue)
-            },
+            onClick = {},
+            enabled = false,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
                 .testTag("bridge_swap_button"),
-            colors = ButtonDefaults.buttonColors(containerColor = ElectricEmerald),
+            colors = ButtonDefaults.buttonColors(containerColor = CardDark),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("INITIATE CRYPTOGRAPHIC BRIDGE", fontWeight = FontWeight.Bold, color = BackgroundDark)
+            Text("BRIDGE EXECUTION DISABLED", fontWeight = FontWeight.Bold, color = TextMuted)
         }
 
         // BRIDGE STATUS NOTIFIER
@@ -2046,178 +2005,36 @@ fun DAppBrowserScreen(viewModel: WalletViewModel) {
 }
 
 // --- GEMINI AI SENTIMENT AND REBALANCER AGENT ---
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun AiAgentScreen(viewModel: WalletViewModel) {
-    val marketSentiment by viewModel.marketSentimentResult.collectAsState()
-    val rebalanceStrategy by viewModel.rebalanceStrategyResult.collectAsState()
-    val isAnalyzingNews by viewModel.isAnalyzingSentiment.collectAsState()
-    val isRebalancing by viewModel.isRebalancingPortfolio.collectAsState()
-    
-    var selectedRiskProfile by remember { mutableStateOf("Balanced") }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "AI", tint = ElectricEmerald, modifier = Modifier.size(28.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("TRADING WITH AI AGENTS", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-        }
-
         Text(
-            "Leverage server-side Gemini intelligence models to execute on-chain sentiment assessments and algorithmic rebalancing optimization protocols.",
-            fontSize = 11.sp,
+            "AI FEATURES DISABLED",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextWhite
+        )
+        Text(
+            "No trusted server-side AI gateway or verified market-data provider is configured. This demo does not generate market sentiment, portfolio recommendations, or trading instructions.",
+            fontSize = 12.sp,
+            color = TextMuted,
+            lineHeight = 18.sp
+        )
+        Text(
+            "No AI network request or financial action is performed.",
+            fontSize = 12.sp,
             color = TextMuted
         )
+    }
+}
 
-        // --- SENTIMENT BLOCK ---
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardDarkBorder, RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = CardDark),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("REAL-TIME NEWS SENTIMENT ANALYSIS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CosmicCyan)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Button(
-                    onClick = { viewModel.fetchMarketSentimentAnalysis() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = CosmicCyan),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    if (isAnalyzingNews) {
-                        CircularProgressIndicator(color = BackgroundDark, modifier = Modifier.size(16.dp))
-                    } else {
-                        Text("REFRESH MARKET SENTIMENT SCORE", fontWeight = FontWeight.Bold, color = BackgroundDark, fontSize = 12.sp)
-                    }
-                }
-
-                if (marketSentiment != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(BackgroundDark)
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = marketSentiment ?: "",
-                            fontSize = 11.sp,
-                            color = TextWhite,
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- REBALANCING AGENT BLOCK ---
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardDarkBorder, RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = CardDark),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("PORTFOLIO REBALANCING ADVISOR", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ElectricEmerald)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text("Target Risk Profile", fontSize = 10.sp, color = TextMuted)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("Conservative", "Balanced", "Aggressive").forEach { profile ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (selectedRiskProfile == profile) ElectricEmerald else BackgroundDark)
-                                .clickable { selectedRiskProfile = profile }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = profile,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (selectedRiskProfile == profile) BackgroundDark else TextMuted
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = { viewModel.runAITradingRebalancer(selectedRiskProfile) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = ElectricEmerald),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    if (isRebalancing) {
-                        CircularProgressIndicator(color = BackgroundDark, modifier = Modifier.size(16.dp))
-                    } else {
-                        Text("RUN ALGORITHMIC ANALYSIS", fontWeight = FontWeight.Bold, color = BackgroundDark, fontSize = 12.sp)
-                    }
-                }
-
-                if (rebalanceStrategy != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(BackgroundDark)
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = rebalanceStrategy ?: "",
-                            fontSize = 11.sp,
-                            color = TextWhite,
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        // Automated trading remains disabled until a reviewed execution service and independent controls exist.
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardDarkBorder, RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = CardDark),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "AUTOMATED TRADING DISABLED",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = VolatilityPink
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "This demo does not create, enable, submit, or simulate buy/sell orders. No exchange, broker, or blockchain execution adapter is configured.",
-                    fontSize = 10.sp,
-                    color = TextMuted
-                )
-            }
-        }
-
-        // --- PRICE ALERTS SCREEN ---
 @Composable
 fun AlertsManagementScreen(viewModel: WalletViewModel) {
     val alerts by viewModel.priceAlerts.collectAsState()
