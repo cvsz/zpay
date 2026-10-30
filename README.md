@@ -4,7 +4,7 @@
 
 # ZPay Android — Demo Build Only
 
-This repository currently contains a non-production UI prototype. Wallet custody, on-chain transactions, payments, card processing, biometric authentication, and AI gateway integration are disabled.
+This repository currently contains a non-production UI prototype. Wallet custody, on-chain transactions, payments, card processing, automated trading, biometric authentication, and AI gateway integration are disabled.
 
 View your app in AI Studio: https://ai.studio/apps/3f01c838-dffa-45be-8dfa-a73d848d3f17
 
