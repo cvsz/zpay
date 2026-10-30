@@ -62,6 +62,8 @@ def main() -> int:
     require("repository.saveTransaction" not in view_model, "view model must not fabricate transaction records in demo mode")
     require("startAITradingMonitoring" not in view_model, "automated trading monitor must remain disabled")
     require("repository.saveTradingRule" not in view_model, "demo mode must not persist active trading rules")
+    require("repository.saveBalance" not in view_model, "demo view model must not mutate balances anywhere")
+    require("repository.saveTransaction" not in view_model, "demo view model must not create transaction records anywhere")
 
     topup_method = function_block(
         view_model,
@@ -104,6 +106,8 @@ def main() -> int:
     require("DEMO MODE — NO KEY CUSTODY" in screens, "wallet UI must not claim secure enclave custody")
     require("Transfers are disabled in this demo build." in screens, "send action must be disabled")
     require("No verified deposit addresses are configured." in screens, "receive action must warn against deposits")
+    require("AUTOMATED TRADING DISABLED" in screens, "trading controls must be replaced with a disabled notice")
+    require("DEPLOY ALGORITHMIC RULE" not in screens, "demo UI must not offer automated rule deployment")
 
     readme = read("README.md")
     require("DEMO BUILD ONLY" in readme or "Demo Build Only" in readme, "README must disclose non-production status")
