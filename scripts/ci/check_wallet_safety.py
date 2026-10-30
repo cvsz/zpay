@@ -94,6 +94,7 @@ def main() -> int:
     wallet_repository = read("app/src/main/java/com/example/data/WalletRepository.kt")
     require("SecureKeyVault" not in wallet_repository, "repository must not call the retired demo key vault")
     require("UnsupportedOperationException" in wallet_repository, "wallet key storage must fail closed")
+    require("_isBiometricEnabled = MutableStateFlow(false)" in view_model, "biometric authentication must remain disabled")
 
     gemini = read("app/src/main/java/com/example/data/GeminiService.kt")
     require("AI_SERVICE_DISABLED" in gemini, "AI client must remain disabled without a trusted backend")
@@ -113,6 +114,9 @@ def main() -> int:
 
     screens = read("app/src/main/java/com/example/ui/screens/WalletScreens.kt")
     require("DEMO BUILD ONLY" in screens, "dashboard must disclose demo-only balances and actions")
+    require("DEMO ACCESS — NO AUTHENTICATION" in screens, "onboarding must disclose that no authentication is implemented")
+    for marker in ("Secure Cryptographic Vault", "Enter Security PIN to Decrypt", "6-Digit Vault PIN", "biometric_trigger", "Simulated Biometric Option", "pin_input"):
+        require(marker not in screens, f"onboarding still presents an unimplemented authentication control: {marker}")
     require("DEMO MODE — NO KEY CUSTODY" in screens, "wallet UI must not claim secure enclave custody")
     require("Transfers are disabled in this demo build." in screens, "send action must be disabled")
     require("No verified deposit addresses are configured." in screens, "receive action must warn against deposits")
