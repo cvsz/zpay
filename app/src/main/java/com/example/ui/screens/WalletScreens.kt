@@ -108,10 +108,6 @@ fun WalletAppContent(viewModel: WalletViewModel) {
 // --- ONBOARDING / LOCK SCREEN ---
 @Composable
 fun OnboardingScreen(viewModel: WalletViewModel) {
-    var passwordPin by remember { mutableStateOf("") }
-    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
-    val context = LocalContext.current
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -121,42 +117,27 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
         verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.height(48.dp))
-        
-        // Brand Shield Decoration
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(Brush.radialGradient(listOf(CosmicCyan.copy(alpha = 0.2f), Color.Transparent)))
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Shield,
-                contentDescription = "Shield Logo",
-                tint = CosmicCyan,
-                modifier = Modifier.size(64.dp)
-            )
-        }
-
+        Icon(
+            imageVector = Icons.Default.Shield,
+            contentDescription = "Demo wallet",
+            tint = CosmicCyan,
+            modifier = Modifier.size(72.dp)
+        )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "APEX WEB3 WALLET",
+            text = "ZEAZ WALLET DEMO",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = TextWhite,
             letterSpacing = 2.sp
         )
         Text(
-            text = "Secure Cryptographic Vault",
-            fontSize = 14.sp,
+            text = "Non-production UI prototype — no custody or financial execution",
+            fontSize = 12.sp,
             color = TextMuted,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 8.dp)
         )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // Encrypted Password Input
+        Spacer(modifier = Modifier.height(32.dp))
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -164,51 +145,25 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
             colors = CardDefaults.cardColors(containerColor = CardDark),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
-                    text = "Enter Security PIN to Decrypt",
+                    text = "DEMO ACCESS — NO AUTHENTICATION",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     color = TextWhite
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedTextField(
-                    value = passwordPin,
-                    onValueChange = { if (it.length <= 6) passwordPin = it },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        if (passwordPin == "1234" || passwordPin.length >= 4) {
-                            viewModel.unlockWallet()
-                        } else {
-                            Toast.makeText(context, "Invalid PIN. Use 1234 or any 4+ digit PIN", Toast.LENGTH_SHORT).show()
-                        }
-                    }),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("pin_input"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        focusedBorderColor = CosmicCyan,
-                        unfocusedBorderColor = CardDarkBorder,
-                        focusedContainerColor = BackgroundDark,
-                        unfocusedContainerColor = BackgroundDark
-                    ),
-                    placeholder = { Text("6-Digit Vault PIN", color = TextGray) },
-                    singleLine = true
+                Text(
+                    text = "No PIN, biometric check, private-key custody, deposit address, payment provider, or trading service is configured. Opening this screen does not authenticate a user or protect funds.",
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    lineHeight = 18.sp
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = {
-                        if (passwordPin.length >= 4) {
-                            viewModel.unlockWallet()
-                        } else {
-                            Toast.makeText(context, "PIN must be at least 4 digits", Toast.LENGTH_SHORT).show()
-                        }
-                    },
+                    onClick = { viewModel.unlockWallet() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
@@ -219,34 +174,6 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                     Text("OPEN DEMO DASHBOARD", fontWeight = FontWeight.Bold, color = DarkRedGray)
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Simulated Biometric Option
-        if (isBiometricEnabled) {
-            IconButton(
-                onClick = { viewModel.unlockWallet() },
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(CardDark)
-                    .border(1.dp, CosmicCyan.copy(alpha = 0.3f), CircleShape)
-                    .testTag("biometric_trigger")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Fingerprint,
-                    contentDescription = "Biometric Lock",
-                    tint = CosmicCyan,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-            Text(
-                text = "Biometric authentication is not configured in this demo",
-                fontSize = 12.sp,
-                color = CosmicCyan,
-                modifier = Modifier.padding(top = 8.dp)
-            )
         }
     }
 }
