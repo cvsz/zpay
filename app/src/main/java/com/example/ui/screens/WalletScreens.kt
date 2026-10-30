@@ -108,10 +108,6 @@ fun WalletAppContent(viewModel: WalletViewModel) {
 // --- ONBOARDING / LOCK SCREEN ---
 @Composable
 fun OnboardingScreen(viewModel: WalletViewModel) {
-    var passwordPin by remember { mutableStateOf("") }
-    val isBiometricEnabled by viewModel.isBiometricEnabled.collectAsState()
-    val context = LocalContext.current
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -121,42 +117,27 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
         verticalArrangement = Arrangement.Center
     ) {
         Spacer(modifier = Modifier.height(48.dp))
-        
-        // Brand Shield Decoration
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(Brush.radialGradient(listOf(CosmicCyan.copy(alpha = 0.2f), Color.Transparent)))
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Shield,
-                contentDescription = "Shield Logo",
-                tint = CosmicCyan,
-                modifier = Modifier.size(64.dp)
-            )
-        }
-
+        Icon(
+            imageVector = Icons.Default.Shield,
+            contentDescription = "Demo wallet",
+            tint = CosmicCyan,
+            modifier = Modifier.size(72.dp)
+        )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "APEX WEB3 WALLET",
+            text = "ZEAZ WALLET DEMO",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = TextWhite,
             letterSpacing = 2.sp
         )
         Text(
-            text = "Secure Cryptographic Vault",
-            fontSize = 14.sp,
+            text = "Non-production UI prototype — no custody or financial execution",
+            fontSize = 12.sp,
             color = TextMuted,
-            modifier = Modifier.padding(top = 4.dp)
+            modifier = Modifier.padding(top = 8.dp)
         )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        // Encrypted Password Input
+        Spacer(modifier = Modifier.height(32.dp))
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -164,51 +145,25 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
             colors = CardDefaults.cardColors(containerColor = CardDark),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 Text(
-                    text = "Enter Security PIN to Decrypt",
+                    text = "DEMO ACCESS — NO AUTHENTICATION",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontWeight = FontWeight.Bold,
                     color = TextWhite
                 )
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                OutlinedTextField(
-                    value = passwordPin,
-                    onValueChange = { if (it.length <= 6) passwordPin = it },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        if (passwordPin == "1234" || passwordPin.length >= 4) {
-                            viewModel.unlockWallet()
-                        } else {
-                            Toast.makeText(context, "Invalid PIN. Use 1234 or any 4+ digit PIN", Toast.LENGTH_SHORT).show()
-                        }
-                    }),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("pin_input"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = TextWhite,
-                        unfocusedTextColor = TextWhite,
-                        focusedBorderColor = CosmicCyan,
-                        unfocusedBorderColor = CardDarkBorder,
-                        focusedContainerColor = BackgroundDark,
-                        unfocusedContainerColor = BackgroundDark
-                    ),
-                    placeholder = { Text("6-Digit Vault PIN", color = TextGray) },
-                    singleLine = true
+                Text(
+                    text = "No PIN, biometric check, private-key custody, deposit address, payment provider, or trading service is configured. Opening this screen does not authenticate a user or protect funds.",
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    lineHeight = 18.sp
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
                 Button(
-                    onClick = {
-                        if (passwordPin.length >= 4) {
-                            viewModel.unlockWallet()
-                        } else {
-                            Toast.makeText(context, "PIN must be at least 4 digits", Toast.LENGTH_SHORT).show()
-                        }
-                    },
+                    onClick = { viewModel.unlockWallet() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp)
@@ -216,37 +171,9 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = CosmicCyan),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("DECRYPT WALLET", fontWeight = FontWeight.Bold, color = DarkRedGray)
+                    Text("OPEN DEMO DASHBOARD", fontWeight = FontWeight.Bold, color = DarkRedGray)
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Simulated Biometric Option
-        if (isBiometricEnabled) {
-            IconButton(
-                onClick = { viewModel.unlockWallet() },
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(CardDark)
-                    .border(1.dp, CosmicCyan.copy(alpha = 0.3f), CircleShape)
-                    .testTag("biometric_trigger")
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Fingerprint,
-                    contentDescription = "Biometric Lock",
-                    tint = CosmicCyan,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-            Text(
-                text = "Tap to unlock with Biometrics",
-                fontSize = 12.sp,
-                color = CosmicCyan,
-                modifier = Modifier.padding(top = 8.dp)
-            )
         }
     }
 }
@@ -325,7 +252,7 @@ fun SecureBalanceVaultComponent(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "SECURE ENCLAVE ACTIVE",
+                        text = "DEMO MODE — NO KEY CUSTODY",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = ElectricEmerald,
@@ -479,7 +406,7 @@ fun SecureBalanceVaultComponent(
                                 kotlinx.coroutines.delay(600)
                                 isAuthenticating = false
                                 showAddresses = true
-                                Toast.makeText(context, "Secure Decryption Successful via Keystore", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Demo placeholder only; no key was decrypted", Toast.LENGTH_SHORT).show()
                             }
                         } else {
                             showAddresses = false
@@ -503,7 +430,7 @@ fun SecureBalanceVaultComponent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = if (showAddresses) "HIDE WALLET ADDRESSES" else "REVEAL SECURE ADDRESSES",
+                        text = if (showAddresses) "HIDE WALLET ADDRESSES" else "SHOW DEMO PLACEHOLDERS",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (showAddresses) TextWhite else BackgroundDark
@@ -583,6 +510,16 @@ fun DashboardScreen(viewModel: WalletViewModel) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        item {
+            Text(
+                text = "DEMO BUILD ONLY — balances and market data are simulated. No custody, deposit, withdrawal, swap, payment, or automated trading service is connected.",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = VolatilityPink,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         // Top Premium Secure Balance Card with Expandable Addresses
         item {
             SecureBalanceVaultComponent(
@@ -606,7 +543,7 @@ fun DashboardScreen(viewModel: WalletViewModel) {
                     icon = Icons.Default.ArrowUpward,
                     label = "SEND",
                     onClick = {
-                        Toast.makeText(context, "Secure outbox active. Select asset below to withdraw.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Transfers are disabled in this demo build.", Toast.LENGTH_SHORT).show()
                     }
                 )
 
@@ -614,14 +551,14 @@ fun DashboardScreen(viewModel: WalletViewModel) {
                     icon = Icons.Default.ArrowDownward,
                     label = "RECEIVE",
                     onClick = {
-                        Toast.makeText(context, "Click 'REVEAL SECURE ADDRESSES' on the portfolio card to view deposit details.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "No verified deposit addresses are configured. Do not send funds.", Toast.LENGTH_LONG).show()
                     }
                 )
 
                 QuickActionButton(
                     icon = Icons.Default.SwapHoriz,
                     label = "SWAP",
-                    onClick = { viewModel.navigateTo("swap") }
+                    onClick = { Toast.makeText(context, "Swaps are disabled in this demo build.", Toast.LENGTH_SHORT).show() }
                 )
 
                 QuickActionButton(
@@ -1777,7 +1714,7 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
             }
         }
 
-        // --- GAS ESTIMATION & ROUTING INFO ---
+        // --- GAS ESTIMATION DISABLED ---
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1785,69 +1722,28 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
             colors = CardDefaults.cardColors(containerColor = CardDark),
             shape = RoundedCornerShape(14.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("GAS FEE ESTIMATION & ROUTING", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
-                    IconButton(onClick = { viewModel.refreshGasEstimation(fromChain) }) {
-                        Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh Gas", tint = ElectricEmerald, modifier = Modifier.size(16.dp))
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Active Pipeline", fontSize = 10.sp, color = TextGray)
-                        Text(
-                            text = when (fromChain) {
-                                "Ethereum" -> "ERC-20 Bridge Link"
-                                "Solana" -> "SPL Wormhole Portal"
-                                "Bitcoin" -> "tBTC Native Custody"
-                                else -> "BSC TokenBridge Gateway"
-                            },
-                            fontSize = 12.sp,
-                            color = TextWhite,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("Estimated Toll Cost", fontSize = 10.sp, color = TextGray)
-                        Text(
-                            text = when (fromChain) {
-                                "Ethereum" -> "~${String.format("%.1f", gasGwei)} Gwei ($${String.format("%.2f", gasGwei * 0.15)})"
-                                "Solana" -> "~${String.format("%.5f", gasSolFee)} SOL ($0.01)"
-                                "Bitcoin" -> "~0.00015 BTC ($13.70)"
-                                else -> "~0.0035 BNB ($2.04)"
-                            },
-                            fontSize = 12.sp,
-                            color = ElectricEmerald,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("GAS FEE ESTIMATION DISABLED", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                Text(
+                    "No verified RPC endpoint or provider quote is configured. Network fees and bridge routes are unavailable in this demo.",
+                    fontSize = 11.sp,
+                    color = TextMuted
+                )
             }
         }
 
-        // EXECUTE SWAP
+        // BRIDGE EXECUTION
         Button(
-            onClick = {
-                val amtValue = amountText.toDoubleOrNull() ?: 1.0
-                viewModel.executeBridgeSwap(fromChain, toChain, fromAsset, toAsset, amtValue)
-            },
+            onClick = {},
+            enabled = false,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp)
                 .testTag("bridge_swap_button"),
-            colors = ButtonDefaults.buttonColors(containerColor = ElectricEmerald),
+            colors = ButtonDefaults.buttonColors(containerColor = CardDark),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("INITIATE CRYPTOGRAPHIC BRIDGE", fontWeight = FontWeight.Bold, color = BackgroundDark)
+            Text("BRIDGE EXECUTION DISABLED", fontWeight = FontWeight.Bold, color = TextMuted)
         }
 
         // BRIDGE STATUS NOTIFIER
@@ -2036,509 +1932,36 @@ fun DAppBrowserScreen(viewModel: WalletViewModel) {
 }
 
 // --- GEMINI AI SENTIMENT AND REBALANCER AGENT ---
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun AiAgentScreen(viewModel: WalletViewModel) {
-    val marketSentiment by viewModel.marketSentimentResult.collectAsState()
-    val rebalanceStrategy by viewModel.rebalanceStrategyResult.collectAsState()
-    val isAnalyzingNews by viewModel.isAnalyzingSentiment.collectAsState()
-    val isRebalancing by viewModel.isRebalancingPortfolio.collectAsState()
-    
-    var selectedRiskProfile by remember { mutableStateOf("Balanced") }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = "AI", tint = ElectricEmerald, modifier = Modifier.size(28.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("TRADING WITH AI AGENTS", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-        }
-
         Text(
-            "Leverage server-side Gemini intelligence models to execute on-chain sentiment assessments and algorithmic rebalancing optimization protocols.",
-            fontSize = 11.sp,
+            "AI FEATURES DISABLED",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextWhite
+        )
+        Text(
+            "No trusted server-side AI gateway or verified market-data provider is configured. This demo does not generate market sentiment, portfolio recommendations, or trading instructions.",
+            fontSize = 12.sp,
+            color = TextMuted,
+            lineHeight = 18.sp
+        )
+        Text(
+            "No AI network request or financial action is performed.",
+            fontSize = 12.sp,
             color = TextMuted
         )
-
-        // --- SENTIMENT BLOCK ---
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardDarkBorder, RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = CardDark),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("REAL-TIME NEWS SENTIMENT ANALYSIS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CosmicCyan)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Button(
-                    onClick = { viewModel.fetchMarketSentimentAnalysis() },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = CosmicCyan),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    if (isAnalyzingNews) {
-                        CircularProgressIndicator(color = BackgroundDark, modifier = Modifier.size(16.dp))
-                    } else {
-                        Text("REFRESH MARKET SENTIMENT SCORE", fontWeight = FontWeight.Bold, color = BackgroundDark, fontSize = 12.sp)
-                    }
-                }
-
-                if (marketSentiment != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(BackgroundDark)
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = marketSentiment ?: "",
-                            fontSize = 11.sp,
-                            color = TextWhite,
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- REBALANCING AGENT BLOCK ---
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardDarkBorder, RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = CardDark),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("PORTFOLIO REBALANCING ADVISOR", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ElectricEmerald)
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Text("Target Risk Profile", fontSize = 10.sp, color = TextMuted)
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf("Conservative", "Balanced", "Aggressive").forEach { profile ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (selectedRiskProfile == profile) ElectricEmerald else BackgroundDark)
-                                .clickable { selectedRiskProfile = profile }
-                                .padding(vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = profile,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (selectedRiskProfile == profile) BackgroundDark else TextMuted
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Button(
-                    onClick = { viewModel.runAITradingRebalancer(selectedRiskProfile) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = ElectricEmerald),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    if (isRebalancing) {
-                        CircularProgressIndicator(color = BackgroundDark, modifier = Modifier.size(16.dp))
-                    } else {
-                        Text("RUN ALGORITHMIC ANALYSIS", fontWeight = FontWeight.Bold, color = BackgroundDark, fontSize = 12.sp)
-                    }
-                }
-
-                if (rebalanceStrategy != null) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(BackgroundDark)
-                            .padding(12.dp)
-                    ) {
-                        Text(
-                            text = rebalanceStrategy ?: "",
-                            fontSize = 11.sp,
-                            color = TextWhite,
-                            lineHeight = 16.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        // --- AI AUTOMATED TRADING TRIGGERS BLOCK ---
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardDarkBorder, RoundedCornerShape(16.dp)),
-            colors = CardDefaults.cardColors(containerColor = CardDark),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.Bolt, contentDescription = "Triggers", tint = CosmicCyan, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("AI AUTOMATED TRADING TRIGGERS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = CosmicCyan)
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    "Deploy responsive triggers to buy or sell assets automatically when specific market price barriers or AI sentiment thresholds are met.",
-                    fontSize = 10.sp,
-                    color = TextMuted
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                val tradingRules by viewModel.aiTradingRules.collectAsState()
-                val currentBalances by viewModel.assetBalances.collectAsState()
-
-                var ruleSymbol by remember { mutableStateOf("BTC") }
-                var ruleAction by remember { mutableStateOf("BUY") }
-                var ruleCondition by remember { mutableStateOf("PRICE_BELOW") }
-                var ruleThresholdText by remember { mutableStateOf("90000.0") }
-                var ruleAmountText by remember { mutableStateOf("0.05") }
-
-                val context = LocalContext.current
-
-                // Form to create automated trading rule
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(BackgroundDark, RoundedCornerShape(8.dp))
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text("CREATE NEW AUTOMATED RULE", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-
-                    // Row 1: Symbol & Action Selection
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Symbol selection
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Asset Symbol", fontSize = 9.sp, color = TextMuted)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(38.dp)
-                                    .border(1.dp, CardDarkBorder, RoundedCornerShape(6.dp))
-                                    .background(CardDark)
-                                    .padding(horizontal = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                listOf("BTC", "ETH", "SOL", "BNB").forEach { sym ->
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(if (ruleSymbol == sym) CosmicCyan else Color.Transparent)
-                                            .clickable { 
-                                                ruleSymbol = sym 
-                                                // Pre-fill reasonable defaults based on asset
-                                                ruleThresholdText = when(sym) {
-                                                    "BTC" -> "90000.0"
-                                                    "ETH" -> "3200.0"
-                                                    "SOL" -> "175.0"
-                                                    else -> "550.0"
-                                                }
-                                                ruleAmountText = when(sym) {
-                                                    "BTC" -> "0.01"
-                                                    "ETH" -> "0.15"
-                                                    "SOL" -> "1.5"
-                                                    else -> "0.5"
-                                                }
-                                            }
-                                            .padding(horizontal = 4.dp, vertical = 2.dp)
-                                    ) {
-                                        Text(sym, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (ruleSymbol == sym) BackgroundDark else TextWhite)
-                                    }
-                                }
-                            }
-                        }
-
-                        // Action BUY / SELL Selection
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Action Type", fontSize = 9.sp, color = TextMuted)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(38.dp)
-                                    .border(1.dp, CardDarkBorder, RoundedCornerShape(6.dp))
-                                    .background(CardDark)
-                                    .padding(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                listOf("BUY", "SELL").forEach { act ->
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxHeight()
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(
-                                                if (ruleAction == act) {
-                                                    if (act == "BUY") ElectricEmerald else Color(0xFFFF3366)
-                                                } else Color.Transparent
-                                            )
-                                            .clickable { ruleAction = act }
-                                            .padding(vertical = 2.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(act, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (ruleAction == act) BackgroundDark else TextWhite)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Row 2: Condition selection
-                    Column {
-                        Text("Trigger Condition", fontSize = 9.sp, color = TextMuted)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(38.dp)
-                                .border(1.dp, CardDarkBorder, RoundedCornerShape(6.dp))
-                                .background(CardDark)
-                                .padding(horizontal = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            listOf("PRICE_BELOW", "PRICE_ABOVE", "SENTIMENT_BULLISH", "SENTIMENT_BEARISH").forEach { cond ->
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(if (ruleCondition == cond) CosmicCyan else Color.Transparent)
-                                        .clickable { ruleCondition = cond }
-                                        .padding(vertical = 4.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        cond.replace("PRICE_", "").replace("SENTIMENT_", ""), 
-                                        fontSize = 8.sp, 
-                                        fontWeight = FontWeight.Bold, 
-                                        color = if (ruleCondition == cond) BackgroundDark else TextMuted
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Row 3: Inputs for Threshold and Amount
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Threshold Input (only visible/enabled for PRICE triggers)
-                        val isPriceTrigger = ruleCondition.startsWith("PRICE")
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(if (isPriceTrigger) "Target Price (USD)" else "Sentiment (AI Monitor)", fontSize = 9.sp, color = TextMuted)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            OutlinedTextField(
-                                value = if (isPriceTrigger) ruleThresholdText else "N/A (Auto Sentiment)",
-                                onValueChange = { if (isPriceTrigger) ruleThresholdText = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = isPriceTrigger,
-                                textStyle = androidx.compose.ui.text.TextStyle(color = TextWhite, fontSize = 11.sp, fontFamily = FontFamily.Monospace),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = CosmicCyan,
-                                    unfocusedBorderColor = CardDarkBorder,
-                                    disabledTextColor = TextMuted,
-                                    disabledBorderColor = CardDarkBorder
-                                ),
-                                maxLines = 1,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                            )
-                        }
-
-                        // Amount Input
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Trade Amount (Crypto)", fontSize = 9.sp, color = TextMuted)
-                            Spacer(modifier = Modifier.height(2.dp))
-                            OutlinedTextField(
-                                value = ruleAmountText,
-                                onValueChange = { ruleAmountText = it },
-                                modifier = Modifier.fillMaxWidth(),
-                                textStyle = androidx.compose.ui.text.TextStyle(color = TextWhite, fontSize = 11.sp, fontFamily = FontFamily.Monospace),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = CosmicCyan,
-                                    unfocusedBorderColor = CardDarkBorder
-                                ),
-                                maxLines = 1,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                            )
-                        }
-                    }
-
-                    // Create Rule Button
-                    Button(
-                        onClick = {
-                            val threshold = ruleThresholdText.toDoubleOrNull() ?: 0.0
-                            val amount = ruleAmountText.toDoubleOrNull() ?: 0.0
-                            if (amount <= 0.0) {
-                                Toast.makeText(context, "Please enter a valid trade amount", Toast.LENGTH_SHORT).show()
-                            } else {
-                                viewModel.createTradingRule(
-                                    symbol = ruleSymbol,
-                                    action = ruleAction,
-                                    condition = ruleCondition,
-                                    threshold = threshold,
-                                    amount = amount
-                                )
-                                Toast.makeText(context, "AI Rule deployed!", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth().height(40.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmicCyan),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("DEPLOY ALGORITHMIC RULE", fontWeight = FontWeight.Bold, color = BackgroundDark, fontSize = 11.sp)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Active Rules Header
-                Text("DEPLOYED AI ACTIVE RULES (${tradingRules.size})", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextWhite)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (tradingRules.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("No active trading rules configured.", fontSize = 10.sp, color = TextMuted)
-                    }
-                } else {
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        tradingRules.forEach { rule ->
-                            val assetPrice = currentBalances.find { it.symbol == rule.assetSymbol }?.priceUsd ?: 0.0
-                            val isPriceTrigger = rule.triggerCondition.startsWith("PRICE")
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .border(1.dp, CardDarkBorder, RoundedCornerShape(10.dp))
-                                    .background(BackgroundDark)
-                                    .padding(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(4.dp))
-                                                    .background(if (rule.actionType == "BUY") ElectricEmerald.copy(alpha = 0.15f) else Color(0xFFFF3366).copy(alpha = 0.15f))
-                                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                            ) {
-                                                Text(
-                                                    text = "AUTO-${rule.actionType}",
-                                                    fontSize = 9.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (rule.actionType == "BUY") ElectricEmerald else Color(0xFFFF3366)
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(
-                                                text = "${rule.tradeAmountCrypto} ${rule.assetSymbol}",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = TextWhite,
-                                                fontFamily = FontFamily.Monospace
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        Text(
-                                            text = when(rule.triggerCondition) {
-                                                "PRICE_ABOVE" -> "Trigger when price is ABOVE $${rule.targetThreshold.toInt()}"
-                                                "PRICE_BELOW" -> "Trigger when price is BELOW $${rule.targetThreshold.toInt()}"
-                                                "SENTIMENT_BULLISH" -> "Trigger when AI sentiment is BULLISH/POSITIVE"
-                                                "SENTIMENT_BEARISH" -> "Trigger when AI sentiment is BEARISH/NEGATIVE"
-                                                else -> "Trigger when condition met"
-                                            },
-                                            fontSize = 10.sp,
-                                            color = TextMuted
-                                        )
-                                        if (isPriceTrigger) {
-                                            Text(
-                                                text = "Current ${rule.assetSymbol} Price: $$assetPrice",
-                                                fontSize = 9.sp,
-                                                color = CosmicCyan,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
-
-                                        if (rule.lastTriggered != null) {
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            val sdf = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
-                                            Text(
-                                                text = "Last triggered: ${sdf.format(Date(rule.lastTriggered))}",
-                                                fontSize = 9.sp,
-                                                color = ElectricEmerald,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Switch(
-                                            checked = rule.isEnabled,
-                                            onCheckedChange = { viewModel.toggleTradingRule(rule.id, it) },
-                                            colors = SwitchDefaults.colors(
-                                                checkedThumbColor = CosmicCyan,
-                                                checkedTrackColor = CosmicCyan.copy(alpha = 0.5f),
-                                                uncheckedThumbColor = TextMuted,
-                                                uncheckedTrackColor = CardDark
-                                            )
-                                        )
-                                        IconButton(
-                                            onClick = { viewModel.deleteTradingRule(rule.id) }
-                                        ) {
-                                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Rule", tint = Color(0xFFFF3366), modifier = Modifier.size(18.dp))
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
-// --- PRICE ALERTS SCREEN ---
 @Composable
 fun AlertsManagementScreen(viewModel: WalletViewModel) {
     val alerts by viewModel.priceAlerts.collectAsState()

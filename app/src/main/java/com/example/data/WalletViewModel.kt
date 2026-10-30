@@ -13,10 +13,10 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     private val repository = WalletRepository(db.walletDao())
 
     // --- Active Wallet Configuration / Addresses ---
-    val btcAddress = "bc1qxy2kg3f8px6pmre90ajvqd9676vazf8hxwgv4n"
-    val ethAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d1476B"
-    val solAddress = "HN7cABvi3B3uSVsby5B94VToL66vLcc86E3Hn9mZ3M4v"
-    val bnbAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d1476B" // Same as EVM for BNB Smart Chain
+    val btcAddress = "NOT_CONFIGURED"
+    val ethAddress = "NOT_CONFIGURED"
+    val solAddress = "NOT_CONFIGURED"
+    val bnbAddress = "NOT_CONFIGURED" // Same as EVM for BNB Smart Chain
 
     // --- UI Navigation State ---
     private val _currentScreen = MutableStateFlow("onboarding") // "onboarding", "dashboard", "wallet_keys", "swap", "alerts", "dapp", "news_ai"
@@ -25,7 +25,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     var pendingDeepLinkScreen: String? = null
 
     // --- Biometric Authentication state ---
-    private val _isBiometricEnabled = MutableStateFlow(true)
+    private val _isBiometricEnabled = MutableStateFlow(false)
     val isBiometricEnabled: StateFlow<Boolean> = _isBiometricEnabled.asStateFlow()
 
     private val _isUnlocked = MutableStateFlow(false)
@@ -76,18 +76,11 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        _isUnlocked.value = false
         viewModelScope.launch {
-            // Check if database is populated, if not fill with starting multi-chain asset allocations
-            if (repository.hasKeys()) {
-                _isUnlocked.value = false // Require biometrics
-            } else {
-                // Pre-generate keys & balances
-                generateNewSecureWallet()
-            }
+            // Demo mode must not create wallet keys, balances, or synthetic transactions.
             startPriceAlertMonitoring()
-            startAITradingMonitoring()
-            startPriceTickerSimulation()
-            addNotification("Secure app linking active for zwallet.zeaz.dev domain.")
+            addNotification("DEMO MODE: no wallet keys, payment provider, or on-chain integration is configured.")
         }
     }
 
@@ -99,7 +92,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         _isUnlocked.value = true
         _currentScreen.value = pendingDeepLinkScreen ?: "dashboard"
         pendingDeepLinkScreen = null
-        addNotification("Session Unlocked securely via Biometrics.")
+        addNotification("Demo dashboard opened; wallet authentication is not implemented.")
     }
 
     fun lockWallet() {
@@ -134,76 +127,35 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun toggleBiometrics() {
-        _isBiometricEnabled.value = !_isBiometricEnabled.value
-        addNotification("Biometric authentication ${if (_isBiometricEnabled.value) "enabled" else "disabled"}")
+        addNotification("Biometric authentication is unavailable until a verified biometric prompt is implemented.")
     }
 
     /**
      * Set up standard Web3 addresses and generate encrypted AES private keys securely
      */
     fun generateNewSecureWallet() {
-        viewModelScope.launch {
-            // Generate and securely store cryptographically random 12-word mnemonic seed phrase in Keystore
-            val mnemonic = SecureKeyVault.generateMnemonic()
-            repository.secureStoreMnemonic(mnemonic)
-
-            repository.secureStoreKey("BTC", btcAddress, "KzHg5X7p9qWf5nUdy5SreH96h1r2v929848Y3uX1zR678X9W")
-            repository.secureStoreKey("ETH_BNB", ethAddress, "0x4c82c9f1a238612984a91cf2376dc828ea285f20f0119e24ca6c3821faf95d6b")
-            repository.secureStoreKey("SOL", solAddress, "2A4b9Y7Z7qW5nR1pXyA6vHq3cT2b9v6xW5nUdy5SreH9")
-
-            val initialBalances = listOf(
-                AssetBalance("BTC", "Bitcoin", "Bitcoin", 0.38, 91520.0, 1.25),
-                AssetBalance("ETH", "Ethereum", "Ethereum", 4.12, 3340.0, -0.85),
-                AssetBalance("SOL", "Solana", "Solana", 32.5, 184.20, 5.12),
-                AssetBalance("BNB", "BNB Coin", "BSC", 8.4, 582.60, 0.45)
-            )
-            repository.saveBalances(initialBalances)
-
-            // Fill default custom volatility price alerts
-            repository.savePriceAlert(PriceAlert(symbol = "BTC", targetPrice = 95000.0, direction = "ABOVE"))
-            repository.savePriceAlert(PriceAlert(symbol = "ETH", targetPrice = 3000.0, direction = "BELOW"))
-
-            // Seed sample on-chain logs
-            repository.saveTransaction(
-                CryptoTransaction(
-                    chain = "Ethereum",
-                    hash = "0x89e24ca6...5d6b",
-                    type = "Receive",
-                    fromAddress = "0x2e08...21fa",
-                    toAddress = ethAddress,
-                    amount = 1.5,
-                    feeUsd = 12.45,
-                    status = "Success",
-                    timestamp = System.currentTimeMillis() - 86400000,
-                    notes = "Inbound liquidity"
-                )
-            )
-        }
+        _isUnlocked.value = false
+        _currentScreen.value = "onboarding"
+        addNotification("Wallet creation is disabled: audited key derivation, signing, and recovery are not implemented.")
     }
 
     /**
      * Decrypts the hardware-secured seed phrase.
      */
-    suspend fun getDecryptedMnemonic(): String? {
-        return repository.decryptMnemonic()
-    }
+    suspend fun getDecryptedMnemonic(): String? = null
 
     /**
      * Decrypts a specific key by chain symbol.
      */
-    suspend fun getDecryptedKey(chain: String): String? {
-        return repository.decryptKey(chain)
-    }
+    suspend fun getDecryptedKey(chain: String): String? = null
 
     /**
      * Estimates gas based on user input, updating routing values dynamically
      */
+    @Suppress("UNUSED_PARAMETER")
     fun refreshGasEstimation(chain: String) {
-        if (chain == "Ethereum" || chain == "BSC") {
-            _gasEthGwei.value = (20..45).random().toDouble()
-        } else if (chain == "Solana") {
-            _gasSolFee.value = 0.00005 + (0..10).random() * 0.00001
-        }
+        _gasEthGwei.value = 0.0
+        _gasSolFee.value = 0.0
     }
 
     /**
@@ -216,121 +168,27 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         toSymbol: String,
         amount: Double
     ) {
-        viewModelScope.launch {
-            _bridgeStatus.value = "Estimating cross-chain gas and liquidity route..."
-            kotlinx.coroutines.delay(1200)
-
-            _bridgeStatus.value = "Requesting signatures from encrypted hardware private key..."
-            kotlinx.coroutines.delay(1000)
-
-            _bridgeStatus.value = "Locking $amount $fromSymbol on $fromChain vault..."
-            kotlinx.coroutines.delay(1500)
-
-            _bridgeStatus.value = "Relaying proofs. Minting $fromSymbol equivalent on $toChain..."
-            kotlinx.coroutines.delay(1500)
-
-            // Update database state
-            val currentBalances = assetBalances.value
-            val fromAsset = currentBalances.find { it.chain == fromChain && it.symbol == fromSymbol }
-            val toAsset = currentBalances.find { it.chain == toChain && it.symbol == toSymbol }
-
-            if (fromAsset != null) {
-                repository.saveBalance(fromAsset.copy(balance = fromAsset.balance - amount))
-            }
-            if (toAsset != null) {
-                // calculate dynamic conversion rate using current USD prices
-                val conversionRate = if (fromAsset != null && fromAsset.priceUsd > 0 && toAsset.priceUsd > 0) {
-                    fromAsset.priceUsd / toAsset.priceUsd
-                } else if (fromSymbol == "ETH" && toSymbol == "BNB") {
-                    5.7
-                } else {
-                    1.0
-                }
-                val received = amount * conversionRate
-                repository.saveBalance(toAsset.copy(balance = toAsset.balance + received))
-            }
-
-            // Log Transaction in database
-            repository.saveTransaction(
-                CryptoTransaction(
-                    chain = "$fromChain → $toChain",
-                    hash = "0xbridge_" + UUID.randomUUID().toString().substring(0, 12),
-                    type = "Bridge",
-                    fromAddress = when (fromChain) {
-                        "Solana" -> solAddress
-                        "Bitcoin" -> btcAddress
-                        else -> ethAddress
-                    },
-                    toAddress = when (toChain) {
-                        "Solana" -> solAddress
-                        "Bitcoin" -> btcAddress
-                        else -> ethAddress
-                    },
-                    amount = amount,
-                    feeUsd = if (fromChain == "Ethereum") 15.20 else 2.10,
-                    status = "Success",
-                    timestamp = System.currentTimeMillis(),
-                    notes = "Cross-chain bridge $fromSymbol to $toSymbol"
-                )
-            )
-
-            _bridgeStatus.value = "COMPLETED"
-            addNotification("Bridge Swapped $amount $fromSymbol to $toChain successfully!")
-        }
+        _bridgeStatus.value = "DISABLED: no audited bridge provider or transaction signer is configured."
+        addNotification("Bridge execution blocked in demo mode. No balances or transactions were changed.")
     }
 
     /**
      * Triggers the Gemini AI Sentiment analysis on cryptocurrency headlines.
      */
     fun fetchMarketSentimentAnalysis() {
-        if (_isAnalyzingSentiment.value) return
-        _isAnalyzingSentiment.value = true
+        _isAnalyzingSentiment.value = false
         _marketSentimentResult.value = null
-
-        viewModelScope.launch {
-            val sampleHeadlines = listOf(
-                "SEC holds positive talks with major Bitcoin ETF providers regarding option listings.",
-                "Ethereum network transaction fees tumble to 4-year low as L2 scaling expands aggressively.",
-                "Solana hits new record high in daily active wallet addresses following DeFi DEX volume breakout.",
-                "Global macroeconomic tensions ease; institutional venture funding inflows to Web3 up 24%."
-            )
-            val result = GeminiService.analyzeNewsSentiment(sampleHeadlines)
-            _marketSentimentResult.value = result
-            _isAnalyzingSentiment.value = false
-            addNotification("AI Sentiment analysis updated.")
-        }
+        addNotification("AI sentiment analysis is disabled; no market data or AI request was performed.")
     }
 
     /**
      * Requests the Gemini AI trading agent to optimize asset allocations based on user holdings.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun runAITradingRebalancer(riskLevel: String) {
-        if (_isRebalancingPortfolio.value) return
-        _isRebalancingPortfolio.value = true
+        _isRebalancingPortfolio.value = false
         _rebalanceStrategyResult.value = null
-
-        viewModelScope.launch {
-            val balances = assetBalances.value
-            val btc = balances.find { it.symbol == "BTC" }
-            val eth = balances.find { it.symbol == "ETH" }
-            val sol = balances.find { it.symbol == "SOL" }
-            val bnb = balances.find { it.symbol == "BNB" }
-
-            val result = GeminiService.rebalancePortfolio(
-                btcBalance = btc?.balance ?: 0.0,
-                btcValue = (btc?.balance ?: 0.0) * (btc?.priceUsd ?: 91520.0),
-                ethBalance = eth?.balance ?: 0.0,
-                ethValue = (eth?.balance ?: 0.0) * (eth?.priceUsd ?: 3340.0),
-                solBalance = sol?.balance ?: 0.0,
-                solValue = (sol?.balance ?: 0.0) * (sol?.priceUsd ?: 184.20),
-                bnbBalance = bnb?.balance ?: 0.0,
-                bnbValue = (bnb?.balance ?: 0.0) * (bnb?.priceUsd ?: 582.60),
-                riskLevel = riskLevel
-            )
-            _rebalanceStrategyResult.value = result
-            _isRebalancingPortfolio.value = false
-            addNotification("AI Trading Agent proposed execution strategy.")
-        }
+        addNotification("AI portfolio recommendations and trading are disabled; no recommendation or order was generated.")
     }
 
     /**
@@ -371,47 +229,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         paymentMethod: String,
         currency: String = "THB"
     ) {
-        viewModelScope.launch {
-            // Find asset and update its balance in database
-            val currentBalances = assetBalances.value
-            val targetAsset = currentBalances.find { it.symbol == symbol }
-            if (targetAsset != null) {
-                repository.saveBalance(targetAsset.copy(balance = targetAsset.balance + cryptoAmount))
-            }
-
-            // Save transaction entry in database
-            val fromChainName = when (symbol) {
-                "BTC" -> "Bitcoin"
-                "ETH" -> "Ethereum"
-                "SOL" -> "Solana"
-                else -> "BSC"
-            }
-            
-            repository.saveTransaction(
-                CryptoTransaction(
-                    chain = fromChainName,
-                    hash = "0xtopup_" + java.util.UUID.randomUUID().toString().substring(0, 12),
-                    type = "Top-Up",
-                    fromAddress = when (paymentMethod) {
-                        "PromptPay" -> "PromptPay QR Gateway"
-                        "Card" -> "Visa/Mastercard Gateway"
-                        else -> "Crypto Network Transfer"
-                    },
-                    toAddress = when (symbol) {
-                        "BTC" -> btcAddress
-                        "SOL" -> solAddress
-                        else -> ethAddress
-                    },
-                    amount = cryptoAmount,
-                    feeUsd = if (paymentMethod == "Card") (fiatAmount * 0.025) / 35.0 else 0.0, // 2.5% card processor fee in USD
-                    status = "Success",
-                    timestamp = System.currentTimeMillis(),
-                    notes = "Secure Fiat On-Ramp via $paymentMethod: loaded $fiatAmount $currency"
-                )
-            )
-
-            addNotification("Loaded +$cryptoAmount $symbol via $paymentMethod ($fiatAmount $currency)")
-        }
+        addNotification("Payment blocked in demo mode. No provider authorization or funds were received.")
     }
 
     /**
@@ -444,22 +262,6 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    private fun startPriceTickerSimulation() {
-        viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(10000) // update prices every 10 seconds
-                val currentBalances = assetBalances.value
-                for (asset in currentBalances) {
-                    // Slight fluctuation between -0.3% and +0.3%
-                    val percentChange = ((-30..30).random().toDouble() / 100.0)
-                    val newPrice = (asset.priceUsd * (1.0 + percentChange / 100.0)).coerceAtLeast(1.0)
-                    val newPriceChange = asset.priceChange24h + percentChange
-                    repository.saveBalance(asset.copy(priceUsd = newPrice, priceChange24h = newPriceChange))
-                }
-            }
-        }
-    }
-
     // --- AI Automated Trading rules management ---
     fun createTradingRule(
         symbol: String,
@@ -468,119 +270,17 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         threshold: Double,
         amount: Double
     ) {
-        viewModelScope.launch {
-            val rule = AITradingRule(
-                assetSymbol = symbol,
-                actionType = action,
-                triggerCondition = condition,
-                targetThreshold = threshold,
-                tradeAmountCrypto = amount
-            )
-            repository.saveTradingRule(rule)
-            addNotification("🤖 AI Agent configured: Auto-$action $amount $symbol when $condition ($threshold)")
-        }
+        addNotification("Automated trading is disabled in this demo build. No order was created or submitted.")
     }
 
     fun toggleTradingRule(id: Long, enabled: Boolean) {
-        viewModelScope.launch {
-            repository.toggleTradingRule(id, enabled)
-            addNotification("AI Trading Rule ${if (enabled) "enabled" else "disabled"}.")
-        }
+        addNotification("Automated trading rules are inert in this demo build. No order was submitted.")
     }
 
     fun deleteTradingRule(id: Long) {
         viewModelScope.launch {
             repository.deleteTradingRule(id)
             addNotification("AI Trading Rule deleted.")
-        }
-    }
-
-    private fun startAITradingMonitoring() {
-        viewModelScope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(12000) // check rules periodically
-                val rules = db.walletDao().getAllTradingRules().firstOrNull() ?: continue
-                val currentBalances = assetBalances.value
-                val sentiment = marketSentimentResult.value ?: ""
-
-                for (rule in rules) {
-                    if (!rule.isEnabled) continue
-                    
-                    // Prevent immediate double triggering (e.g., cooldown of 1 minute)
-                    if (rule.lastTriggered != null && System.currentTimeMillis() - rule.lastTriggered < 60000) {
-                        continue
-                    }
-
-                    val currentAsset = currentBalances.find { it.symbol == rule.assetSymbol } ?: continue
-                    var conditionMet = false
-
-                    when (rule.triggerCondition) {
-                        "PRICE_ABOVE" -> {
-                            if (currentAsset.priceUsd >= rule.targetThreshold) {
-                                conditionMet = true
-                            }
-                        }
-                        "PRICE_BELOW" -> {
-                            if (currentAsset.priceUsd <= rule.targetThreshold) {
-                                conditionMet = true
-                            }
-                        }
-                        "SENTIMENT_BULLISH" -> {
-                            if (sentiment.uppercase().contains("BULLISH") || sentiment.uppercase().contains("POSITIVE")) {
-                                conditionMet = true
-                            }
-                        }
-                        "SENTIMENT_BEARISH" -> {
-                            if (sentiment.uppercase().contains("BEARISH") || sentiment.uppercase().contains("NEGATIVE")) {
-                                conditionMet = true
-                            }
-                        }
-                    }
-
-                    if (conditionMet) {
-                        // Execute the trade!
-                        val updatedBalance = if (rule.actionType == "BUY") {
-                            currentAsset.balance + rule.tradeAmountCrypto
-                        } else {
-                            (currentAsset.balance - rule.tradeAmountCrypto).coerceAtLeast(0.0)
-                        }
-
-                        // Save updated balance
-                        repository.saveBalance(currentAsset.copy(balance = updatedBalance))
-
-                        // Update the last triggered timestamp
-                        repository.updateRuleTriggered(rule.id, System.currentTimeMillis())
-
-                        // Log Transaction
-                        val chainName = when (rule.assetSymbol) {
-                            "BTC" -> "Bitcoin"
-                            "ETH" -> "Ethereum"
-                            "SOL" -> "Solana"
-                            else -> "BSC"
-                        }
-                        repository.saveTransaction(
-                            CryptoTransaction(
-                                chain = chainName,
-                                hash = "0xaitrade_" + UUID.randomUUID().toString().substring(0, 12),
-                                type = if (rule.actionType == "BUY") "AI Auto-Buy" else "AI Auto-Sell",
-                                fromAddress = "AI Algorithmic Engine",
-                                toAddress = when (rule.assetSymbol) {
-                                    "BTC" -> btcAddress
-                                    "SOL" -> solAddress
-                                    else -> ethAddress
-                                },
-                                amount = rule.tradeAmountCrypto,
-                                feeUsd = 1.50,
-                                status = "Success",
-                                timestamp = System.currentTimeMillis(),
-                                notes = "Automated execution triggered by: ${rule.triggerCondition} at threshold ${rule.targetThreshold}"
-                            )
-                        )
-
-                        addNotification("🤖 AI AGENT TRIGGERED: Automated ${rule.actionType} of ${rule.tradeAmountCrypto} ${rule.assetSymbol} executed successfully! Trigger rule: ${rule.triggerCondition} threshold ${rule.targetThreshold} met.")
-                    }
-                }
-            }
         }
     }
 }

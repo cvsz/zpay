@@ -1,14 +1,6 @@
 package com.example.data
 
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import android.util.Base64
 import kotlinx.coroutines.flow.Flow
-import java.security.KeyStore
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
 
 class WalletRepository(private val dao: WalletDao) {
 
@@ -18,62 +10,23 @@ class WalletRepository(private val dao: WalletDao) {
     val activeAlerts: Flow<List<PriceAlert>> = dao.getActivePriceAlerts()
     val allAlerts: Flow<List<PriceAlert>> = dao.getAllPriceAlerts()
 
-    // --- Secure Key Management (Hardware-Backed SecureKeyVault AES-GCM) ---
-
+    // Wallet key custody is intentionally unavailable in this demo build.
+    @Suppress("UNUSED_PARAMETER")
     suspend fun secureStoreMnemonic(mnemonic: String) {
-        try {
-            val payload = SecureKeyVault.encrypt(mnemonic)
-            val entry = EncryptedKey(
-                chain = "MNEMONIC",
-                address = "",
-                encryptedPrivateKey = payload.encryptedData,
-                iv = payload.iv
-            )
-            dao.insertKey(entry)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        throw UnsupportedOperationException("Wallet key storage is disabled until audited key derivation and recovery are implemented.")
     }
 
-    suspend fun decryptMnemonic(): String? {
-        val entry = dao.getKeyForChain("MNEMONIC") ?: return null
-        return try {
-            SecureKeyVault.decrypt(entry.encryptedPrivateKey, entry.iv)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
+    suspend fun decryptMnemonic(): String? = null
 
+    @Suppress("UNUSED_PARAMETER")
     suspend fun secureStoreKey(chain: String, address: String, rawPrivateKey: String) {
-        try {
-            val payload = SecureKeyVault.encrypt(rawPrivateKey)
-            val keyEntry = EncryptedKey(
-                chain = chain,
-                address = address,
-                encryptedPrivateKey = payload.encryptedData,
-                iv = payload.iv
-            )
-            dao.insertKey(keyEntry)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
+        throw UnsupportedOperationException("Wallet key storage is disabled until audited key derivation and signing are implemented.")
     }
 
-    suspend fun decryptKey(chain: String): String? {
-        val keyEntry = dao.getKeyForChain(chain) ?: return null
-        return try {
-            SecureKeyVault.decrypt(keyEntry.encryptedPrivateKey, keyEntry.iv)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        }
-    }
+    @Suppress("UNUSED_PARAMETER")
+    suspend fun decryptKey(chain: String): String? = null
 
-    suspend fun hasKeys(): Boolean {
-        // Exclude the MNEMONIC record from checking if primary crypto keys exist
-        return dao.getAllKeys().any { it.chain != "MNEMONIC" }
-    }
+    suspend fun hasKeys(): Boolean = false
 
     suspend fun removeAllKeys() {
         dao.clearAllKeys()

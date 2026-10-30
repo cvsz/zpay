@@ -24,7 +24,6 @@ abstract class WalletDatabase : RoomDatabase() {
                     WalletDatabase::class.java,
                     "apex_wallet_database"
                 )
-                .fallbackToDestructiveMigration(true)
                 .build()
                 INSTANCE = instance
                 instance
