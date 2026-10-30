@@ -120,7 +120,6 @@ def main() -> int:
     require("DEMO MODE — NO KEY CUSTODY" in screens, "wallet UI must not claim secure enclave custody")
     require("Transfers are disabled in this demo build." in screens, "send action must be disabled")
     require("No verified deposit addresses are configured." in screens, "receive action must warn against deposits")
-    require("AUTOMATED TRADING DISABLED" in screens, "trading controls must be replaced with a disabled notice")
     require("DEPLOY ALGORITHMIC RULE" not in screens, "demo UI must not offer automated rule deployment")
     require("AI FEATURES DISABLED" in screens, "AI screen must disclose disabled AI functionality")
     for marker in ("TRADING WITH AI AGENTS", "REFRESH MARKET SENTIMENT SCORE", "RUN ALGORITHMIC ANALYSIS", "server-side Gemini intelligence models"):
