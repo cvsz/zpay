@@ -35,11 +35,18 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
         with:
-          packages: |
-            platform-tools
-            platforms;android-36.1
-            build-tools;36.0.0
+          packages: 'platform-tools platforms;android-36.1 build-tools;36.0.0'
           accept-android-sdk-licenses: true
+
+      - name: Verify required Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdk_root="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          test -n "$sdk_root"
+          test -d "$sdk_root/platform-tools"
+          test -d "$sdk_root/platforms/android-36.1"
+          test -d "$sdk_root/build-tools/36.0.0"
 
       - name: Set up pinned Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
