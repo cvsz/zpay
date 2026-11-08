@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+      ZWallet network security configuration.
+      Cleartext traffic is disallowed everywhere. Only specific TLS domains are permitted,
+      reducing the attack surface for the Gemini API and TradingView WebView integrations.
+    -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <domain-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+        <domain includeSubdomains="true">generativelanguage.googleapis.com</domain>
+        <domain includeSubdomains="true">s3.tradingview.com</domain>
+        <domain includeSubdomains="true">s.tradingview.com</domain>
+    </domain-config>
+</network-security-config>

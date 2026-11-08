@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface WalletDao {
     // --- Asset Balances ---
-    @Query("SELECT * FROM asset_balances ORDER BY balance * priceUsd DESC")
+    @Query("SELECT * FROM asset_balances ORDER BY balanceMinorUnit * priceUsdMinorUnit DESC")
     fun getAssetBalances(): Flow<List<AssetBalance>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -19,8 +19,16 @@ interface WalletDao {
     @Query("SELECT * FROM crypto_transactions ORDER BY timestamp DESC")
     fun getTransactions(): Flow<List<CryptoTransaction>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTransaction(tx: CryptoTransaction)
+    @Query("SELECT * FROM crypto_transactions WHERE idempotencyKey = :key LIMIT 1")
+    suspend fun findTransactionByIdempotencyKey(key: String): CryptoTransaction?
+
+    /**
+     * Inserts a transaction only when no row with the same idempotencyKey exists.
+     * Returns the inserted row id, or null if a duplicate idempotencyKey was detected.
+     * The unique index on idempotencyKey makes this check atomic at the DB level.
+     */
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insertTransaction(tx: CryptoTransaction): Long
 
     // --- Price Alerts ---
     @Query("SELECT * FROM price_alerts WHERE isTriggered = 0 ORDER BY dateCreated DESC")
