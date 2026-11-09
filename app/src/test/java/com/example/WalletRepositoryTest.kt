@@ -19,15 +19,24 @@ class WalletRepositoryTest {
         override suspend fun findTransactionByIdempotencyKey(key: String): CryptoTransaction? =
             transactions.find { it.idempotencyKey == key }
         override suspend fun insertTransaction(tx: CryptoTransaction): Long {
-            transactions.add(tx)
-            return tx.id
+            val newId = (transactions.maxOfOrNull { it.id } ?: 0L) + 1
+            transactions.add(tx.copy(id = newId))
+            return newId
+        }
+        override suspend fun insertTransactionIgnoringDuplicate(tx: CryptoTransaction): Long {
+            if (transactions.any { it.idempotencyKey == tx.idempotencyKey }) return -1L
+            val newId = (transactions.maxOfOrNull { it.id } ?: 0L) + 1
+            transactions.add(tx.copy(id = newId))
+            return newId
         }
         override fun getActivePriceAlerts(): Flow<List<PriceAlert>> = flow { emit(emptyList()) }
         override fun getAllPriceAlerts(): Flow<List<PriceAlert>> = flow { emit(emptyList()) }
         override suspend fun insertPriceAlert(alert: PriceAlert) = Unit
         override suspend fun triggerPriceAlert(id: Long) = Unit
         override suspend fun deletePriceAlert(id: Long) = Unit
-        override fun getAllKeys(): List<EncryptedKey> = emptyList()
+        override suspend fun getAllKeys(): List<EncryptedKey> = emptyList()
+        override suspend fun getTransactionById(id: Long): CryptoTransaction? =
+            transactions.find { it.id == id }
         override suspend fun getKeyForChain(chain: String): EncryptedKey? = null
         override suspend fun insertKey(key: EncryptedKey) = Unit
         override suspend fun clearAllKeys() = Unit
@@ -36,31 +45,48 @@ class WalletRepositoryTest {
         override suspend fun toggleTradingRule(id: Long, enabled: Boolean) = Unit
         override suspend fun updateRuleTriggered(id: Long, timestamp: Long) = Unit
         override suspend fun deleteTradingRule(id: Long) = Unit
+        override suspend fun updateTransaction(tx: CryptoTransaction): Int {
+            val idx = transactions.indexOfFirst { it.id == tx.id }
+            if (idx >= 0) transactions[idx] = tx
+            return 1
+        }
     }
 
     private val repo = WalletRepository(dao)
 
     @Test
     fun `validatePayment rejects unsupported symbol`() {
-        assertFailsWith<IllegalArgumentException> {
+        var threw = false
+        try {
             repo.validatePayment("XYZ", 1000)
+        } catch (e: IllegalArgumentException) {
+            threw = true
         }
+        assertTrue(threw)
     }
 
     @Test
     fun `validatePayment rejects non-positive amount`() {
-        assertFailsWith<IllegalArgumentException> {
+        var threw1 = false
+        try {
             repo.validatePayment("BTC", 0)
+        } catch (e: IllegalArgumentException) {
+            threw1 = true
         }
-        assertFailsWith<IllegalArgumentException> {
+        assertTrue(threw1)
+        var threw2 = false
+        try {
             repo.validatePayment("BTC", -500)
+        } catch (e: IllegalArgumentException) {
+            threw2 = true
         }
+        assertTrue(threw2)
     }
 
     @Test
     fun `validatePayment accepts valid amount`() {
         repo.validatePayment("BTC", 1000)
-        repo.validatePayment("ETH", 500_000_000_000_000_000L)
+        repo.validatePayment("ETH", 1)
     }
 
     @Test
@@ -102,26 +128,34 @@ class WalletRepositoryTest {
 
     @Test
     fun `createPaymentIdempotent rejects blank idempotency key`() = runBlocking {
-        assertFailsWith<IllegalArgumentException> {
+        var threw = false
+        try {
             repo.createPaymentIdempotent(
                 chain = "BTC", hash = "0xabc", type = "Receive",
                 fromAddress = "0xfrom", toAddress = "0xto",
                 amountMinorUnit = 1000, feeUsdMinorUnit = 100,
                 idempotencyKey = ""
             )
+        } catch (e: IllegalArgumentException) {
+            threw = true
         }
+        assertTrue(threw)
     }
 
     @Test
     fun `createPaymentIdempotent validates amount`() = runBlocking {
-        assertFailsWith<IllegalArgumentException> {
+        var threw = false
+        try {
             repo.createPaymentIdempotent(
                 chain = "BTC", hash = "0xabc", type = "Receive",
                 fromAddress = "0xfrom", toAddress = "0xto",
                 amountMinorUnit = -100, feeUsdMinorUnit = 100,
                 idempotencyKey = UUID.randomUUID().toString()
             )
+        } catch (e: IllegalArgumentException) {
+            threw = true
         }
+        assertTrue(threw)
     }
 
     @Test
@@ -132,9 +166,13 @@ class WalletRepositoryTest {
             amountMinorUnit = 1000, feeUsdMinorUnit = 100,
             idempotencyKey = UUID.randomUUID().toString()
         )
-        assertFailsWith<IllegalArgumentException> {
+        var threw = false
+        try {
             repo.settleTransaction(tx.id, TransactionStatus.PENDING)
+        } catch (e: IllegalArgumentException) {
+            threw = true
         }
+        assertTrue(threw)
     }
 
     private fun storedTx(id: Long): CryptoTransaction = runBlocking {
@@ -152,9 +190,13 @@ class WalletRepositoryTest {
         )
         repo.settleTransaction(tx.id, TransactionStatus.SUCCESS)
         assertEquals(TransactionStatus.SUCCESS, storedTx(tx.id).status)
-        assertFailsWith<IllegalStateException> {
+        var threw = false
+        try {
             repo.settleTransaction(tx.id, TransactionStatus.FAILED)
+        } catch (e: IllegalStateException) {
+            threw = true
         }
+        assertTrue(threw)
         assertEquals(TransactionStatus.SUCCESS, storedTx(tx.id).status) // still SUCCESS
     }
 

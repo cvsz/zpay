@@ -179,7 +179,7 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
                         if (passwordPin.length == 6) {
-                            viewModel.unlockWallet()
+                            viewModel.unlockWallet(passwordPin)
                         } else {
                             Toast.makeText(context, "Invalid PIN. Enter a 6-digit PIN.", Toast.LENGTH_SHORT).show()
                         }
@@ -204,7 +204,7 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                 Button(
                     onClick = {
                         if (passwordPin.length == 6) {
-                            viewModel.unlockWallet()
+                            viewModel.unlockWallet(passwordPin)
                         } else {
                             Toast.makeText(context, "PIN must be 6 digits", Toast.LENGTH_SHORT).show()
                         }
@@ -226,7 +226,7 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
         // Simulated Biometric Option
         if (isBiometricEnabled) {
             IconButton(
-                onClick = { viewModel.unlockWallet() },
+                onClick = { viewModel.unlockWallet(passwordPin) },
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
@@ -2404,8 +2404,8 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                                     symbol = ruleSymbol,
                                     action = ruleAction,
                                     condition = ruleCondition,
-                                    threshold = threshold,
-                                    amount = amount
+                                    thresholdMinorUnit = threshold.toLong(),
+                                    amountMinorUnit = amount.toLong()
                                 )
                                 Toast.makeText(context, "AI Rule deployed!", Toast.LENGTH_SHORT).show()
                             }
@@ -2642,7 +2642,7 @@ fun AlertsManagementScreen(viewModel: WalletViewModel) {
                     onClick = {
                         val price = priceTargetText.toDoubleOrNull() ?: 0.0
                         if (price > 0.0) {
-                            viewModel.createPriceAlert(targetSymbol, price, directionSelection)
+                            viewModel.createPriceAlert(targetSymbol, price.toLong(), directionSelection)
                             Toast.makeText(context, "Target Alert set.", Toast.LENGTH_SHORT).show()
                         }
                     },

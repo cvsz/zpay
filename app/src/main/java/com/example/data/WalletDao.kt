@@ -30,6 +30,19 @@ interface WalletDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTransaction(tx: CryptoTransaction): Long
 
+    /**
+     * Inserts a transaction, ignoring a conflict on the unique idempotencyKey index.
+     * Returns the new row id, or -1 when the insert was skipped because of a duplicate key.
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertTransactionIgnoringDuplicate(tx: CryptoTransaction): Long
+
+    /** Updates an existing transaction row (used for state-machine settlement). */
+    @Update
+    suspend fun updateTransaction(tx: CryptoTransaction): Int
+    @Query("SELECT * FROM crypto_transactions WHERE id = :id LIMIT 1")
+    suspend fun getTransactionById(id: Long): CryptoTransaction?
+
     // --- Price Alerts ---
     @Query("SELECT * FROM price_alerts WHERE isTriggered = 0 ORDER BY dateCreated DESC")
     fun getActivePriceAlerts(): Flow<List<PriceAlert>>

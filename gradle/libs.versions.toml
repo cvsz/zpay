@@ -89,6 +89,8 @@ roborazzi-junit-rule = { group = "io.github.takahirom.roborazzi", name = "robora
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-ai = { group = "com.google.firebase", name = "firebase-ai" }
 firebase-appcheck-recaptcha = { group = "com.google.firebase", name = "firebase-appcheck-recaptcha" }
+web3j = { group = "org.web3j", name = "crypto", version = "4.12.2" }
+bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version = "1.78.1" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.crypto.WalletCrypto
 import java.security.SecureRandom
+import java.text.SimpleDateFormat
 import java.util.*
 
 class WalletViewModel(application: Application) : AndroidViewModel(application) {
@@ -16,10 +18,10 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     // --- Active Wallet Configuration / Addresses ---
     // Public addresses only. Private key material is never hardcoded; it is generated or imported
     // by the user and stored encrypted in the Android Keystore via SecureKeyVault.
-    val btcAddress = "bc1qxy2kg3f8px6pmre90ajvqd9676vazf8hxwgv4n"
-    val ethAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d1476B"
-    val solAddress = "HN7cABvi3B3uSVsby5B94VToL66vLcc86E3Hn9mZ3M4v"
-    val bnbAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d1476B" // Same as EVM for BNB Smart Chain
+    var btcAddress = "bc1qxy2kg3f8px6pmre90ajvqd9676vazf8hxwgv4n"
+    var ethAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d1476B"
+    var solAddress = "HN7cABvi3B3uSVsby5B94VToL66vLcc86E3Hn9mZ3M4v"
+    var bnbAddress = "0x71C7656EC7ab88b098defB751B7401B5f6d1476B" // Same as EVM for BNB Smart Chain
 
     // --- UI Navigation State ---
     private val _currentScreen = MutableStateFlow("onboarding") // "onboarding", "dashboard", "wallet_keys", "swap", "alerts", "dapp", "news_ai"
@@ -33,6 +35,11 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _isUnlocked = MutableStateFlow(false)
     val isUnlocked: StateFlow<Boolean> = _isUnlocked.asStateFlow()
+
+    // --- Vault Authentication ---
+    private val vaultAuth = VaultAuthManager(application)
+    private val _authMessage = MutableStateFlow<String?>(null)
+    val authMessage: StateFlow<String?> = _authMessage.asStateFlow()
 
     // --- Gas Fee Estimation State (USD minor units = cents) ---
     private val _gasEthLimit = MutableStateFlow(21000)
@@ -98,11 +105,37 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         _currentScreen.value = screen
     }
 
-    fun unlockWallet() {
+    fun setupPin(pin: String): Boolean {
+        require(pin.length == 6 && pin.all { it.isDigit() }) { "PIN must be 6 digits" }
+        return try {
+            vaultAuth.setPin(pin)
+            _authMessage.value = null
+            true
+        } catch (e: Exception) {
+            _authMessage.value = e.message
+            false
+        }
+    }
+
+    fun unlockWallet(pin: String): Boolean {
+        if (!vaultAuth.hasPin()) {
+            _authMessage.value = "No PIN configured. Set a PIN first."
+            return false
+        }
+        if (vaultAuth.isLockedOut()) {
+            _authMessage.value = "Too many attempts. Try again in ${vaultAuth.lockoutRemainingMillis() / 1000}s."
+            return false
+        }
+        if (!vaultAuth.verifyPin(pin)) {
+            _authMessage.value = "Invalid PIN"
+            return false
+        }
         _isUnlocked.value = true
+        _authMessage.value = null
         _currentScreen.value = pendingDeepLinkScreen ?: "dashboard"
         pendingDeepLinkScreen = null
         addNotification("Session unlocked securely.")
+        return true
     }
 
     fun lockWallet() {
@@ -152,18 +185,34 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     fun generateNewSecureWallet() {
         viewModelScope.launch {
             try {
-                // Generate and securely store a cryptographically random mnemonic seed phrase in Keystore
+                // Generate BIP-39 mnemonic (12 words, valid checksum)
                 val mnemonic = SecureKeyVault.generateMnemonic()
                 repository.secureStoreMnemonic(mnemonic)
 
-                // Per-chain key material generated from secure random entropy (not hardcoded secrets).
-                val secureRandom = SecureRandom()
-                fun randomHex(len: Int): String = (1..len).map { secureRandom.nextInt(16) }
-                    .joinToString("") { "%x".format(it) }
+                // Derive seed and per-chain keys via BIP-32 / SLIP-0010
+                val seed = WalletCrypto.mnemonicToSeed(mnemonic)
+                val btcKey = WalletCrypto.deriveSecp256k1(seed, WalletCrypto.BTC_DERIVATION_PATH)
+                val evmKey = WalletCrypto.deriveSecp256k1(seed, WalletCrypto.EVM_DERIVATION_PATH)
+                val solKey = WalletCrypto.deriveEd25519(seed, WalletCrypto.SOL_DERIVATION_PATH)
 
-                repository.secureStoreKey("BTC", btcAddress, randomHex(64))
-                repository.secureStoreKey("ETH_BNB", ethAddress, randomHex(64))
-                repository.secureStoreKey("SOL", solAddress, randomHex(64))
+                // Derive real addresses
+                val btcPub = WalletCrypto.compressedPublicKey(btcKey.privateKey)
+                val derivedBtcAddress = WalletCrypto.bitcoinAddress(btcPub)
+                val derivedEthAddress = WalletCrypto.evmAddress(evmKey)
+                val derivedSolAddress = WalletCrypto.solanaAddress(solKey.publicKey)
+
+                // Store real derived keys (encrypted in Keystore)
+                repository.secureStoreKey("BTC", derivedBtcAddress, WalletCrypto.hex(WalletCrypto.privateKeyBytes(btcKey)))
+                repository.secureStoreKey("ETH_BNB", derivedEthAddress, WalletCrypto.hex(WalletCrypto.privateKeyBytes(evmKey)))
+                repository.secureStoreKey("SOL", derivedSolAddress, WalletCrypto.hex(solKey.privateKey))
+
+                // Update address state
+                btcAddress = derivedBtcAddress
+                ethAddress = derivedEthAddress
+                solAddress = derivedSolAddress
+                bnbAddress = derivedEthAddress
+
+                addNotification("Wallet created with BIP-39 mnemonic. Back up your seed phrase!")
             } catch (e: Exception) {
                 addNotification("Wallet generation failed: keys were not stored. ${e.message}")
             }
@@ -171,10 +220,10 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             // Initial balances in MINOR UNITS (integer) to avoid floating-point financial error.
             // priceUsdMinorUnit is USD cents per whole unit.
             val initialBalances = listOf(
-                AssetBalance("BTC", "Bitcoin", "Bitcoin", 38_000_000, 9_152_000, 1.25), // 0.38 BTC @ $91,520
-                AssetBalance("ETH", "Ethereum", "Ethereum", 4_120_000_000_000_000_000L, 334_000, -85), // 4.12 ETH @ $3,340
-                AssetBalance("SOL", "Solana", "Solana", 3_250_000_000L, 18_420, 512), // 32.5 SOL @ $184.20
-                AssetBalance("BNB", "BNB Coin", "BSC", 8_400_000_000_000L, 58_260, 45) // 8.4 BNB @ $582.60
+                AssetBalance("BTC", "Bitcoin", "Bitcoin", 38_000_000L, 9_152_000L, 1.25), // 0.38 BTC @ $91,520
+                AssetBalance("ETH", "Ethereum", "Ethereum", 4_120_000_000_000_000_000L, 334_000L, -85.0), // 4.12 ETH @ $3,340
+                AssetBalance("SOL", "Solana", "Solana", 3_250_000_000L, 18_420L, 512.0), // 32.5 SOL @ $184.20
+                AssetBalance("BNB", "BNB Coin", "BSC", 8_400_000_000_000L, 58_260L, 45.0) // 8.4 BNB @ $582.60
             )
             repository.saveBalances(initialBalances)
 
@@ -345,14 +394,14 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             val bnb = balances.find { it.symbol == "BNB" }
 
             val result = GeminiService.rebalancePortfolio(
-                btcBalance = btc?.balanceMinorUnit?.toDouble() ?: 0.0 / 1e8,
-                btcValue = (btc?.balanceMinorUnit ?: 0L) * (btc?.priceUsdMinorUnit ?: 9_152_000L),
-                ethBalance = eth?.balanceMinorUnit?.toDouble() ?: 0.0 / 1e18,
-                ethValue = (eth?.balanceMinorUnit ?: 0L) * (eth?.priceUsdMinorUnit ?: 334_000L),
-                solBalance = sol?.balanceMinorUnit?.toDouble() ?: 0.0 / 1e9,
-                solValue = (sol?.balanceMinorUnit ?: 0L) * (sol?.priceUsdMinorUnit ?: 18_420L),
-                bnbBalance = bnb?.balanceMinorUnit?.toDouble() ?: 0.0 / 1e8,
-                bnbValue = (bnb?.balanceMinorUnit ?: 0L) * (bnb?.priceUsdMinorUnit ?: 58_260L),
+                btcBalance = btc?.balanceMinorUnit?.toDouble() ?: 0.0,
+                btcValue = btc?.balanceMinorUnit?.toDouble() ?: 0.0 * (btc?.priceUsdMinorUnit ?: 9_152_000L).toDouble(),
+                ethBalance = eth?.balanceMinorUnit?.toDouble() ?: 0.0,
+                ethValue = eth?.balanceMinorUnit?.toDouble() ?: 0.0 * (eth?.priceUsdMinorUnit ?: 334_000L).toDouble(),
+                solBalance = sol?.balanceMinorUnit?.toDouble() ?: 0.0,
+                solValue = sol?.balanceMinorUnit?.toDouble() ?: 0.0 * (sol?.priceUsdMinorUnit ?: 18_420L).toDouble(),
+                bnbBalance = bnb?.balanceMinorUnit?.toDouble() ?: 0.0,
+                bnbValue = bnb?.balanceMinorUnit?.toDouble() ?: 0.0 * (bnb?.priceUsdMinorUnit ?: 58_260L).toDouble(),
                 riskLevel = riskLevel
             )
             _rebalanceStrategyResult.value = result
@@ -531,7 +580,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 for (asset in currentBalances) {
                     // Slight fluctuation between -0.3% and +0.3%
                     val percentChange = ((-30..30).random().toDouble() / 100.0)
-                    val newPrice = (asset.priceUsdMinorUnit * (1.0 + percentChange / 100.0)).coerceAtLeast(100L).toLong()
+                    val newPrice = (asset.priceUsdMinorUnit.toDouble() * (1.0 + percentChange / 100.0)).coerceAtLeast(100.0).toLong()
                     val newPriceChange = asset.priceChange24h + percentChange
                     repository.saveBalance(asset.copy(priceUsdMinorUnit = newPrice, priceChange24h = newPriceChange))
                 }

@@ -172,7 +172,7 @@ class WalletRepository(private val dao: WalletDao) {
             "Only terminal states allowed via settle: $newStatus"
         }
         // Load current row under the same coroutine to check ownership/transition atomically.
-        val current = dao.getTransactions().first().firstOrNull { it.id == transactionId }
+        val current = dao.getTransactionById(transactionId)
             ?: throw IllegalStateException("Transaction not found: $transactionId")
         require(TransactionStateMachine.isValidTransition(current.status, newStatus)) {
             "Invalid transition ${current.status} -> $newStatus for tx $transactionId"
