@@ -193,7 +193,7 @@ class WalletRepositoryTest {
         var threw = false
         try {
             repo.settleTransaction(tx.id, TransactionStatus.FAILED)
-        } catch (e: IllegalStateException) {
+        } catch (e: IllegalArgumentException) {
             threw = true
         }
         assertTrue(threw)

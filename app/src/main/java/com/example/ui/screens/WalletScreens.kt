@@ -1037,6 +1037,7 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
     var solKeyDecrypted by remember { mutableStateOf<String?>(null) }
     var decryptedMnemonic by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
 
     var pendingActionLabel by remember { mutableStateOf<String?>(null) }
@@ -1182,7 +1183,11 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
                     }
                 }
             },
-            onHide = { btcKeyDecrypted = null }
+            onHide = { btcKeyDecrypted = null },
+            onCopyKey = {
+                clipboardManager.setText(AnnotatedString(btcKeyDecrypted ?: ""))
+                Toast.makeText(context, "BTC Private Key copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
         )
 
         // ETH & BNB KEY BLOCK
@@ -1204,7 +1209,11 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
                     }
                 }
             },
-            onHide = { ethKeyDecrypted = null }
+            onHide = { ethKeyDecrypted = null },
+            onCopyKey = {
+                clipboardManager.setText(AnnotatedString(ethKeyDecrypted ?: ""))
+                Toast.makeText(context, "ETH Private Key copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
         )
 
         // SOLANA KEY BLOCK
@@ -1226,7 +1235,11 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
                     }
                 }
             },
-            onHide = { solKeyDecrypted = null }
+            onHide = { solKeyDecrypted = null },
+            onCopyKey = {
+                clipboardManager.setText(AnnotatedString(solKeyDecrypted ?: ""))
+                Toast.makeText(context, "SOL Private Key copied to clipboard", Toast.LENGTH_SHORT).show()
+            }
         )
 
         // EXPORT PDF TAX DOCUMENTATION SECTION
@@ -1411,7 +1424,8 @@ fun KeyCard(
     address: String,
     decryptedKey: String?,
     onReveal: () -> Unit,
-    onHide: () -> Unit
+    onHide: () -> Unit,
+    onCopyKey: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -1447,6 +1461,9 @@ fun KeyCard(
                         fontFamily = FontFamily.Monospace,
                         modifier = Modifier.weight(1f)
                     )
+                    IconButton(onClick = onCopyKey) {
+                        Icon(imageVector = Icons.Default.ContentCopy, contentDescription = "Copy", tint = CosmicCyan)
+                    }
                     IconButton(onClick = onHide) {
                         Icon(imageVector = Icons.Default.VisibilityOff, contentDescription = "Hide", tint = TextMuted)
                     }

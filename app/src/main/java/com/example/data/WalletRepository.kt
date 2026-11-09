@@ -179,7 +179,7 @@ class WalletRepository(private val dao: WalletDao) {
         }
         // Apply the transition (single-writer per transaction id via PK).
         val updated = current.copy(status = newStatus)
-        dao.insertTransaction(updated)
+        dao.updateTransaction(updated)
         return updated
     }
 
