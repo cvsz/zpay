@@ -178,10 +178,10 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                     onValueChange = { if (it.length <= 6) passwordPin = it },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
-                        if (passwordPin == "1234" || passwordPin.length >= 4) {
-                            viewModel.unlockWallet()
+                        if (passwordPin.length == 6) {
+                            viewModel.unlockWallet(passwordPin)
                         } else {
-                            Toast.makeText(context, "Invalid PIN. Use 1234 or any 4+ digit PIN", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Invalid PIN. Enter a 6-digit PIN.", Toast.LENGTH_SHORT).show()
                         }
                     }),
                     modifier = Modifier
@@ -203,10 +203,10 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = {
-                        if (passwordPin.length >= 4) {
-                            viewModel.unlockWallet()
+                        if (passwordPin.length == 6) {
+                            viewModel.unlockWallet(passwordPin)
                         } else {
-                            Toast.makeText(context, "PIN must be at least 4 digits", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "PIN must be 6 digits", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier
@@ -226,7 +226,7 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
         // Simulated Biometric Option
         if (isBiometricEnabled) {
             IconButton(
-                onClick = { viewModel.unlockWallet() },
+                onClick = { viewModel.unlockWallet(passwordPin) },
                 modifier = Modifier
                     .size(80.dp)
                     .clip(CircleShape)
@@ -445,7 +445,7 @@ fun SecureBalanceVaultComponent(
                             color = TextMuted
                         )
                         Text(
-                            text = "${asset.balance}",
+                            text = "${String.format("%.8f", asset.displayBalance()).trimEnd('0').trimEnd('.')}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextWhite
@@ -567,10 +567,10 @@ fun DashboardScreen(viewModel: WalletViewModel) {
     var selectedTvSymbol by remember { mutableStateOf("BINANCE:BTCUSDT") }
     val context = LocalContext.current
 
-    // Calculate totals
-    val totalBalance = assets.sumOf { it.balance * it.priceUsd }
-    val totalBalance24hAgo = assets.sumOf { 
-        val balanceVal = it.balance * it.priceUsd
+    // Calculate totals (read-only display values derived from integer minor-unit storage)
+    val totalBalance = assets.sumOf { it.displayValueUsd() }
+    val totalBalance24hAgo = assets.sumOf {
+        val balanceVal = it.displayValueUsd()
         balanceVal / (1 + (it.priceChange24h / 100))
     }
     val totalDeltaPercentage = if (totalBalance24hAgo > 0) {
@@ -903,7 +903,7 @@ fun DashboardScreen(viewModel: WalletViewModel) {
                         Column {
                             Text(asset.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextWhite)
                             Text(
-                                text = "${asset.balance} ${asset.symbol}",
+                                text = "${String.format("%.8f", asset.displayBalance()).trimEnd('0').trimEnd('.')} ${asset.symbol}",
                                 fontSize = 12.sp,
                                 color = TextMuted
                             )
@@ -912,7 +912,7 @@ fun DashboardScreen(viewModel: WalletViewModel) {
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "$${String.format("%,.2f", asset.balance * asset.priceUsd)}",
+                            text = "$${String.format("%,.2f", asset.displayValueUsd())}",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextWhite
@@ -950,7 +950,7 @@ fun DashboardScreen(viewModel: WalletViewModel) {
                         
                         var startAngle = 0f
                         assets.forEachIndexed { index, asset ->
-                            val value = asset.balance * asset.priceUsd
+                            val value = asset.displayValueUsd()
                             val sweepAngle = if (totalBalance > 0) {
                                 ((value / totalBalance) * 360f).toFloat()
                             } else 90f
@@ -975,7 +975,7 @@ fun DashboardScreen(viewModel: WalletViewModel) {
                         
                         val colors = listOf(Color(0xFFF7931A), Color(0xFF627EEA), Color(0xFF14F195), Color(0xFFF0B90B))
                         assets.forEachIndexed { index, asset ->
-                            val value = asset.balance * asset.priceUsd
+                            val value = asset.displayValueUsd()
                             val percent = if (totalBalance > 0) (value / totalBalance) * 100 else 0.0
                             
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1568,9 +1568,9 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
     val sourceAsset = assets.find { it.symbol == fromAsset }
     val destAsset = assets.find { it.symbol == toAsset }
 
-    val currentBalance = sourceAsset?.balance ?: 0.0
-    val rate = if (sourceAsset != null && destAsset != null && destAsset.priceUsd > 0) {
-        sourceAsset.priceUsd / destAsset.priceUsd
+    val currentBalance = sourceAsset?.displayBalance() ?: 0.0
+    val rate = if (sourceAsset != null && destAsset != null && destAsset.displayPriceUsd() > 0) {
+        sourceAsset.displayPriceUsd() / destAsset.displayPriceUsd()
     } else if (fromAsset == "ETH" && toAsset == "BNB") {
         5.7
     } else {
@@ -1838,7 +1838,9 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
         Button(
             onClick = {
                 val amtValue = amountText.toDoubleOrNull() ?: 1.0
-                viewModel.executeBridgeSwap(fromChain, toChain, fromAsset, toAsset, amtValue)
+                val decimals = AssetDecimals.decimals(fromAsset)
+                val amtMinorUnit = (amtValue * Math.pow(10.0, decimals.toDouble())).toLong()
+                viewModel.executeBridgeSwap(fromChain, toChain, fromAsset, toAsset, amtMinorUnit)
             },
             modifier = Modifier
                 .fillMaxWidth()
@@ -2402,8 +2404,8 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                                     symbol = ruleSymbol,
                                     action = ruleAction,
                                     condition = ruleCondition,
-                                    threshold = threshold,
-                                    amount = amount
+                                    thresholdMinorUnit = threshold.toLong(),
+                                    amountMinorUnit = amount.toLong()
                                 )
                                 Toast.makeText(context, "AI Rule deployed!", Toast.LENGTH_SHORT).show()
                             }
@@ -2436,7 +2438,7 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         tradingRules.forEach { rule ->
-                            val assetPrice = currentBalances.find { it.symbol == rule.assetSymbol }?.priceUsd ?: 0.0
+                            val assetPrice = currentBalances.find { it.symbol == rule.assetSymbol }?.displayPriceUsd() ?: 0.0
                             val isPriceTrigger = rule.triggerCondition.startsWith("PRICE")
 
                             Box(
@@ -2468,7 +2470,7 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                                             }
                                             Spacer(modifier = Modifier.width(8.dp))
                                             Text(
-                                                text = "${rule.tradeAmountCrypto} ${rule.assetSymbol}",
+                                                text = "${formatMinorUnits(rule.tradeAmountMinorUnit, rule.assetSymbol)} ${rule.assetSymbol}",
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = TextWhite,
@@ -2478,8 +2480,8 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
                                             text = when(rule.triggerCondition) {
-                                                "PRICE_ABOVE" -> "Trigger when price is ABOVE $${rule.targetThreshold.toInt()}"
-                                                "PRICE_BELOW" -> "Trigger when price is BELOW $${rule.targetThreshold.toInt()}"
+                                                "PRICE_ABOVE" -> "Trigger when price is ABOVE $${formatUsdMinorUnits(rule.targetThresholdMinorUnit)}"
+                                                "PRICE_BELOW" -> "Trigger when price is BELOW $${formatUsdMinorUnits(rule.targetThresholdMinorUnit)}"
                                                 "SENTIMENT_BULLISH" -> "Trigger when AI sentiment is BULLISH/POSITIVE"
                                                 "SENTIMENT_BEARISH" -> "Trigger when AI sentiment is BEARISH/NEGATIVE"
                                                 else -> "Trigger when condition met"
@@ -2640,7 +2642,7 @@ fun AlertsManagementScreen(viewModel: WalletViewModel) {
                     onClick = {
                         val price = priceTargetText.toDoubleOrNull() ?: 0.0
                         if (price > 0.0) {
-                            viewModel.createPriceAlert(targetSymbol, price, directionSelection)
+                            viewModel.createPriceAlert(targetSymbol, price.toLong(), directionSelection)
                             Toast.makeText(context, "Target Alert set.", Toast.LENGTH_SHORT).show()
                         }
                     },
@@ -2680,7 +2682,7 @@ fun AlertsManagementScreen(viewModel: WalletViewModel) {
                         Column {
                             Text("${alert.symbol} Price Target", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextWhite)
                             Text(
-                                text = "Notify when price goes ${alert.direction.lowercase()} $${alert.targetPrice}",
+                                text = "Notify when price goes ${alert.direction.lowercase()} $${formatUsdMinorUnits(alert.targetPriceMinorUnit)}",
                                 fontSize = 11.sp,
                                 color = TextMuted
                             )
