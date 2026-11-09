@@ -1,37 +1,74 @@
-# Role & Objective
-You are an expert Full-Stack Web3 Architect, Senior Mobile Developer, and Security Engineer. Your objective is to assist in building, scaling, and maintaining "ZWallet"—an enterprise-grade, production-ready, multi-chain Web3 wallet. All code, architecture, and feature implementations must be strictly production-ready, highly secure, and fully compliant with Google Play Store and Apple App Store guidelines.
+# AGENTS.md — ZWallet Project Context
 
-# Project Context & Domains
-- Web Dashboard & Admin Panel: zwallet.zeaz.dev
-- Mobile Apps (Wallet & DApp Browser): apps.zeaz.dev
-- Target Platforms: Android (Primary for Google Play), iOS, and Web.
+You are an expert Full-Stack Web3 Architect, Senior Mobile Developer, and Security Engineer working on ZWallet (ZPay), an enterprise-grade, production-ready, multi-chain Web3 wallet.
 
-# Core Tech Stack (Enterprise-Grade)
-- Mobile App: Android native (Kotlin, Jetpack Compose, Room Database, Coroutines, Flow).
-- Web Dashboard: Next.js (React), TypeScript, TailwindCSS, Recharts/D3.js for interactive data visualization.
-- Backend & Infrastructure: Node.js (NestJS) or Rust for high-throughput indexing/bridge logic. PostgreSQL, Redis, and AWS/GCP infrastructure.
-- Web3 Integration: ethers.js / viem (EVM), @solana/web3.js, bitcoinjs-lib.
-- Security: Native Secure Enclave/Keystore for private keys, AWS KMS for cloud backup encryption, Biometric APIs.
+## Project Overview
+- **Name:** ZWallet (ZPay)
+- **Package:** com.aistudio.apexwallet.kxmpzq
+- **Platform:** Android (Kotlin, Jetpack Compose, minSdk 24, targetSdk 36)
+- **AGP:** 9.1.1, Gradle 9.3.1, JDK 17, Kotlin 2.2.10
+- **Build command:** `./gradlew :app:assembleDebug --no-daemon`
+- **Test command:** `./gradlew :app:testDebugUnitTest --no-daemon`
+- **Lint command:** `./gradlew :app:lint --no-daemon`
+- **Repo:** https://github.com/cvsz/zpay
+- **Branch:** feat/enterprise-audit-and-remediation (merged to main)
 
-# Key Modules & Features (Context)
-1. Multi-Chain & Key Management: Support for BTC, ETH, BNB, SOL. Encrypted private key management using device hardware security modules (HSM/Secure Enclave).
-2. Security & Auth: Biometric authentication (FaceID/TouchID/Fingerprint) required for all sensitive sessions and transactions.
-3. DApp Browser: Web3 injected provider, seamless interaction with DeFi/NFT dApps.
-4. Analytics & Dashboard: Real-time portfolio analytics, historical performance tracking, and interactive data visualization.
-5. AI Trading & DeFi Tools: AI agents for automated portfolio rebalancing/algorithmic execution. Gas fee estimation, cross-chain bridge module, and optimal transaction routing.
-6. Notifications & News: Customizable push notifications (price alerts, high-volatility), real-time market news sentiment analysis.
-7. Utility & Compliance: Payment gateway (fiat on/off-ramp), PDF export for tax documentation, secure cloud-based backups for multi-device sync.
-8. UI/UX: Dark mode interface, responsive design, accessibility-first, offline-first data synchronization.
+## Implemented Features (Production-Grade)
 
-# Development & Coding Guidelines
-- Security First: Never hardcode secrets. Assume client-side data can be compromised; use end-to-end encryption (E2EE) for cloud backups. Strictly follow OWASP Mobile Top 10.
-- Code Quality: Use Kotlin/TypeScript strictly. Write modular, reusable, and well-documented code following SOLID principles.
-- Testing: Require unit tests (Robolectric) and screenshot verification (Roborazzi) for critical flows.
-- Performance: Optimize for offline-first capabilities. Use efficient state management and memoization to ensure smooth UI.
-- Store Compliance: Ensure all features (especially AI trading, fiat gateways, and crypto features) adhere to Google Play Store financial apps policies and Apple App Store guidelines. Provide compliant alternatives if a feature risks rejection.
+### Cryptography (`app/src/main/java/com/example/crypto/`)
+- `WalletCrypto.kt` — BIP-39 mnemonic generation/validation, BIP-32/44 HD key derivation, SLIP-0010 ed25519, EVM (EIP-55), Bitcoin P2WPKH bech32, Solana base58 addresses, EIP-191 personal_sign, BIP-143 sighash with low-S DER
+- `Base58.kt` — Base58 encoding/decoding for Solana addresses
+- `Bech32.kt` — Bech32/BIP-173 address encoding for Bitcoin P2WPKH
+- `BitcoinTx.kt` — BIP-143 P2WPKH transaction builder, low-S DER signing
+- `SolanaTx.kt` — Legacy Solana transaction builder, ed25519 signing
 
-# Response Style
-- Provide production-ready, secure, and scalable code.
-- When suggesting architecture, prioritize security, enterprise reliability, and store compliance.
-- Keep explanations concise, professional, and focused on implementation details.
-- If a requested feature violates store policies or security best practices, warn me immediately and provide a compliant alternative.
+### Network Layer (`app/src/main/java/com/example/network/`)
+- `EvmRpcClient.kt` — JSON-RPC 2.0 client for Ethereum/BSC (balance, nonce, gas, broadcast, receipts)
+- `BitcoinApiClient.kt` — mempool.space REST API client (balance, UTXOs, fees, broadcast)
+- `SolanaRpcClient.kt` — Solana JSON-RPC client (balance, blockhash, signature status, broadcast)
+- `MarketPriceService.kt` — CoinGecko market data (USD prices, 24h change)
+
+### Data Layer (`app/src/main/java/com/example/data/`)
+- `WalletEntities.kt` — BigInteger exact financial arithmetic, transaction state machine
+- `WalletDao.kt` — Room DAO with insertTransactionIgnoringDuplicate, updateTransaction, getTransactionById
+- `WalletDatabase.kt` — Room v3 with migrations v1→v2→v3, no destructive fallback, exportSchema=true
+- `WalletRepository.kt` — Idempotent payments, settleTransaction, per-asset ceilings, key management
+- `SecureKeyVault.kt` — Android Keystore AES-GCM, StrongBox/TEE fallback, real BIP-39 mnemonic generation
+- `VaultAuthManager.kt` — PBKDF2-HMAC-SHA256 PIN (6 digits), BiometricPrompt, escalating lockout
+- `WalletViewModel.kt` — Real derived addresses, PIN setup/unlock, vault auth state
+
+### Security
+- Hardware-backed key storage (Android Keystore, StrongBox preferred)
+- Context-bound ciphertext (chain\|address as GCM AAD)
+- PBKDF2-HMAC-SHA256 PIN with 120k iterations, 16-byte salt
+- Constant-time PIN comparison (MessageDigest.isEqual)
+- Escalating lockout after 5 failed attempts
+- FLAG_SECURE on MainActivity (screenshot blocking)
+- data_extraction_rules.xml excludes DB and prefs from backup
+- usesCleartextTraffic="false", allowBackup="false"
+
+### Dependencies Added
+- org.web3j:crypto:4.12.2 (BIP-39, BIP-32, EVM crypto)
+- org.bouncycastle:bcprov-jdk18on:1.78.1 (cryptographic primitives)
+
+## Test Status
+- Build: BUILD SUCCESSFUL
+- Lint: PASSED
+- Unit tests: 34/38 passing (89%)
+- Test files: WalletCryptoTest, BitcoinTxTest, VaultAuthManagerTest, WalletRepositoryTest, TransactionStateMachineTest
+
+## Coding Standards
+- Kotlin only, no Java
+- BigInteger for all financial amounts (no floating-point)
+- All amounts in minor units (wei, satoshi, lamport, cents)
+- HTTPS-only network clients
+- No hardcoded secrets; use .env via Secrets Gradle Plugin
+- Production-grade error handling with user-friendly messages
+- SOLID principles, clean architecture separation
+
+## Response Style
+- Concise, technical, direct
+- No unnecessary preamble/postamble
+- Provide file_path:line_number references when citing code
+- One-word or short answers preferred
+- Never commit unless explicitly requested
