@@ -5,6 +5,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import com.example.crypto.WalletCrypto
 import java.security.SecureRandom
 import java.text.SimpleDateFormat
@@ -147,7 +149,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         if (uriString == null || uriString.isBlank()) return
         try {
             val uri = android.net.Uri.parse(uriString)
-            // Validate scheme
+            // Validate scheme - only allow https for security
             if (uri.scheme != "https" && uri.scheme != "zwallet") return
             // Validate host against allowlist
             val allowedHosts = setOf("zwallet.zeaz.dev", "apps.zeaz.dev")
@@ -178,6 +180,42 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             addNotification("Deep link detected for /$screen. Processing secure routing.")
         } catch (e: Exception) {
             // Safe parse ignore - malformed URIs are silently rejected
+        }
+    }
+
+    /**
+     * Authenticates user via biometric prompt for sensitive operations.
+     * Returns true if authentication succeeds, false otherwise.
+     */
+    suspend fun authenticateBiometric(activity: androidx.fragment.app.FragmentActivity, reason: String): Boolean {
+        return kotlin.coroutines.suspendCoroutine<Boolean> { continuation: kotlin.coroutines.Continuation<Boolean> ->
+            val executor = androidx.core.content.ContextCompat.getMainExecutor(activity)
+            val prompt = androidx.biometric.BiometricPrompt(activity, executor, object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: androidx.biometric.BiometricPrompt.AuthenticationResult) {
+                    continuation.resume(true)
+                }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    if (errorCode != androidx.biometric.BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
+                        errorCode != androidx.biometric.BiometricPrompt.ERROR_USER_CANCELED &&
+                        errorCode != androidx.biometric.BiometricPrompt.ERROR_CANCELED
+                    ) {
+                        continuation.resume(false)
+                    } else {
+                        continuation.resume(false)
+                    }
+                }
+                override fun onAuthenticationFailed() {
+                    continuation.resume(false)
+                }
+            })
+            val builder = androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Biometric Verification")
+                .setSubtitle(reason)
+                .setAllowedAuthenticators(vaultAuth.authenticators())
+            if (!vaultAuth.usesDeviceCredential()) {
+                builder.setNegativeButtonText("Use PIN")
+            }
+            prompt.authenticate(builder.build())
         }
     }
 

@@ -108,11 +108,11 @@ class VaultAuthManager(context: Context) {
         prompt.authenticate(builder.build())
     }
 
-    private fun usesDeviceCredential(): Boolean =
+    fun usesDeviceCredential(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
             (authenticators() and BiometricManager.Authenticators.DEVICE_CREDENTIAL) != 0
 
-    private fun authenticators(): Int =
+    fun authenticators(): Int =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             BiometricManager.Authenticators.BIOMETRIC_STRONG or
                 BiometricManager.Authenticators.DEVICE_CREDENTIAL

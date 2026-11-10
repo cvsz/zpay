@@ -49,6 +49,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.*
+import com.example.data.AssetBalance
+import com.example.data.formatMinorUnits
+import com.example.data.formatUsdMinorUnits
 import com.example.ui.theme.*
 import java.io.File
 import java.io.FileOutputStream
@@ -223,30 +226,69 @@ fun OnboardingScreen(viewModel: WalletViewModel) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Simulated Biometric Option
+        // Real Biometric Option
         if (isBiometricEnabled) {
-            IconButton(
-                onClick = { viewModel.unlockWallet(passwordPin) },
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(CardDark)
-                    .border(1.dp, CosmicCyan.copy(alpha = 0.3f), CircleShape)
-                    .testTag("biometric_trigger")
+            var biometricAuthState by remember { mutableStateOf<Int>(0) } // 0=idle, 1=authenticating, 2=success, 3=error
+            val scope = rememberCoroutineScope()
+            val context = LocalContext.current
+
+            Column(
+                modifier = Modifier.padding(top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.Fingerprint,
-                    contentDescription = "Biometric Lock",
-                    tint = CosmicCyan,
-                    modifier = Modifier.size(40.dp)
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(when (biometricAuthState) {
+                            1 -> CardDark // authenticating
+                            2 -> ElectricEmerald.copy(alpha = 0.15f) // success
+                            else -> CardDark // idle
+                        })
+                        .border(1.dp, when (biometricAuthState) {
+                            1 -> CosmicCyan
+                            2 -> ElectricEmerald
+                            else -> CosmicCyan.copy(alpha = 0.3f)
+                        }, CircleShape)
+                        .clickable(enabled = biometricAuthState == 0) {
+                            scope.launch {
+                                biometricAuthState = 1
+                                val activity = (context as androidx.fragment.app.FragmentActivity)
+                                val success = viewModel.authenticateBiometric(activity, "Unlock wallet with biometrics")
+                                biometricAuthState = if (success) 2 else 3
+                                if (success) {
+                                    delay(800)
+                                    biometricAuthState = 0
+                                } else {
+                                    delay(2000)
+                                    biometricAuthState = 0
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    when (biometricAuthState) {
+                        1 -> CircularProgressIndicator(color = CosmicCyan, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
+                        2 -> Icon(imageVector = Icons.Default.Check, contentDescription = "Verified", tint = ElectricEmerald, modifier = Modifier.size(44.dp))
+                        else -> Icon(imageVector = Icons.Default.Fingerprint, contentDescription = "Biometric Lock", tint = CosmicCyan, modifier = Modifier.size(40.dp))
+                    }
+                }
+
+                Text(
+                    text = when (biometricAuthState) {
+                        1 -> "Authenticating..."
+                        2 -> "Biometrics Verified!"
+                        else -> "Tap to unlock with Biometrics"
+                    },
+                    fontSize = 12.sp,
+                    color = when (biometricAuthState) {
+                        1 -> CosmicCyan
+                        2 -> ElectricEmerald
+                        else -> CosmicCyan
+                    },
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
-            Text(
-                text = "Tap to unlock with Biometrics",
-                fontSize = 12.sp,
-                color = CosmicCyan,
-                modifier = Modifier.padding(top = 8.dp)
-            )
         }
     }
 }
@@ -1028,6 +1070,136 @@ fun DashboardScreen(viewModel: WalletViewModel) {
     }
 }
 
+// --- REAL BIOMETRIC DIALOG ---
+@Composable
+fun RealBiometricDialog(
+    viewModel: WalletViewModel,
+    actionLabel: String,
+    onSuccess: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var isAuthenticating by remember { mutableStateOf(false) }
+    var authError by remember { mutableStateOf<String?>(null) }
+    var showSuccessAnim by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = BackgroundDark,
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.border(1.dp, CardDarkBorder, RoundedCornerShape(24.dp)),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Fingerprint,
+                    contentDescription = "Biometrics",
+                    tint = CosmicCyan,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    "BIOMETRIC VERIFICATION",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextWhite,
+                    letterSpacing = 1.sp
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Confirm biometric validation to extract and reveal sensitive credentials for:\n$actionLabel",
+                    fontSize = 12.sp,
+                    color = TextMuted,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 18.sp
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(if (showSuccessAnim) ElectricEmerald.copy(alpha = 0.15f) else CardDark)
+                        .clickable(enabled = !isAuthenticating && !showSuccessAnim) {
+                            scope.launch {
+                                isAuthenticating = true
+                                authError = null
+                                val activity = (context as androidx.fragment.app.FragmentActivity)
+                                val success = viewModel.authenticateBiometric(activity, "Extract $actionLabel")
+                                isAuthenticating = false
+                                if (success) {
+                                    showSuccessAnim = true
+                                    delay(800)
+                                    onSuccess()
+                                } else {
+                                    authError = "Biometric authentication failed"
+                                }
+                            }
+                        }
+                        .border(1.dp, if (showSuccessAnim) ElectricEmerald else CosmicCyan, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isAuthenticating) {
+                        CircularProgressIndicator(
+                            color = CosmicCyan,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(48.dp)
+                        )
+                    } else if (showSuccessAnim) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Verified",
+                            tint = ElectricEmerald,
+                            modifier = Modifier.size(44.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Fingerprint,
+                            contentDescription = "Tap to Scan",
+                            tint = CosmicCyan,
+                            modifier = Modifier.size(44.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = if (isAuthenticating) "Scanning fingerprint..." else if (showSuccessAnim) "Biometrics Verified!" else "Tap fingerprint icon to authenticate",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = if (showSuccessAnim) ElectricEmerald else if (isAuthenticating) CosmicCyan else TextMuted
+                )
+
+                if (authError != null) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = authError!!,
+                        fontSize = 11.sp,
+                        color = Color.Red,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onDismiss,
+                colors = ButtonDefaults.textButtonColors(contentColor = TextMuted)
+            ) {
+                Text("CANCEL", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        }
+    )
+}
+
 // --- SECURE CRYPTOGRAPHIC KEYS PAGE ---
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -1102,6 +1274,7 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         words.forEachIndexed { index, word ->
+                            val displayWord = maskMnemonicWord(word, index, words.size)
                             Row(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -1117,7 +1290,7 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = word,
+                                    text = displayWord,
                                     fontSize = 12.sp,
                                     color = TextWhite,
                                     fontWeight = FontWeight.Medium,
@@ -1281,7 +1454,8 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
     }
 
     if (pendingActionLabel != null && pendingActionCallback != null) {
-        BiometricSimulationDialog(
+        RealBiometricDialog(
+            viewModel = viewModel,
             actionLabel = pendingActionLabel!!,
             onSuccess = {
                 pendingActionCallback?.invoke()
@@ -1294,128 +1468,6 @@ fun KeyManagementScreen(viewModel: WalletViewModel) {
             }
         )
     }
-}
-
-@Composable
-fun BiometricSimulationDialog(
-    actionLabel: String,
-    onSuccess: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    var isAuthenticating by remember { mutableStateOf(false) }
-    var authError by remember { mutableStateOf<String?>(null) }
-    var showSuccessAnim by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        containerColor = BackgroundDark,
-        shape = RoundedCornerShape(24.dp),
-        modifier = Modifier.border(1.dp, CardDarkBorder, RoundedCornerShape(24.dp)),
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Fingerprint,
-                    contentDescription = "Biometrics",
-                    tint = CosmicCyan,
-                    modifier = Modifier.size(28.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    "BIOMETRIC VERIFICATION",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextWhite,
-                    letterSpacing = 1.sp
-                )
-            }
-        },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Confirm biometric validation to extract and reveal sensitive credentials for:\n$actionLabel",
-                    fontSize = 12.sp,
-                    color = TextMuted,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(if (showSuccessAnim) ElectricEmerald.copy(alpha = 0.15f) else CardDark)
-                        .clickable(enabled = !isAuthenticating && !showSuccessAnim) {
-                            scope.launch {
-                                isAuthenticating = true
-                                authError = null
-                                delay(1200) // Simulation delay
-                                isAuthenticating = false
-                                showSuccessAnim = true
-                                delay(800) // Success checkmark delay
-                                onSuccess()
-                            }
-                        }
-                        .border(1.dp, if (showSuccessAnim) ElectricEmerald else CosmicCyan, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isAuthenticating) {
-                        CircularProgressIndicator(
-                            color = CosmicCyan,
-                            strokeWidth = 3.dp,
-                            modifier = Modifier.size(48.dp)
-                        )
-                    } else if (showSuccessAnim) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Verified",
-                            tint = ElectricEmerald,
-                            modifier = Modifier.size(44.dp)
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Fingerprint,
-                            contentDescription = "Tap to Scan",
-                            tint = CosmicCyan,
-                            modifier = Modifier.size(44.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = if (isAuthenticating) "Scanning fingerprint..." else if (showSuccessAnim) "Biometrics Verified!" else "Tap fingerprint icon to authenticate",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = if (showSuccessAnim) ElectricEmerald else if (isAuthenticating) CosmicCyan else TextMuted
-                )
-
-                if (authError != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = authError!!,
-                        fontSize = 11.sp,
-                        color = Color.Red,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onDismiss,
-                colors = ButtonDefaults.textButtonColors(contentColor = TextMuted)
-            ) {
-                Text("CANCEL", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-            }
-        }
-    )
 }
 
 @Composable
@@ -1455,7 +1507,7 @@ fun KeyCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        decryptedKey,
+                        maskPrivateKey(decryptedKey),
                         fontSize = 10.sp,
                         color = TextWhite,
                         fontFamily = FontFamily.Monospace,
@@ -2064,6 +2116,9 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
     
     var selectedRiskProfile by remember { mutableStateOf("Balanced") }
 
+    val tradingRules by viewModel.aiTradingRules.collectAsState()
+    val currentBalances by viewModel.assetBalances.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -2224,9 +2279,6 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
-                val tradingRules by viewModel.aiTradingRules.collectAsState()
-                val currentBalances by viewModel.assetBalances.collectAsState()
-
                 var ruleSymbol by remember { mutableStateOf("BTC") }
                 var ruleAction by remember { mutableStateOf("BUY") }
                 var ruleCondition by remember { mutableStateOf("PRICE_BELOW") }
@@ -2283,8 +2335,8 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                                                     "ETH" -> "0.15"
                                                     "SOL" -> "1.5"
                                                     else -> "0.5"
-                                                }
-                                            }
+}
+}
                                             .padding(horizontal = 4.dp, vertical = 2.dp)
                                     ) {
                                         Text(sym, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = if (ruleSymbol == sym) BackgroundDark else TextWhite)
@@ -2353,16 +2405,16 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        cond.replace("PRICE_", "").replace("SENTIMENT_", ""), 
-                                        fontSize = 8.sp, 
-                                        fontWeight = FontWeight.Bold, 
+                                        cond.replace("PRICE_", "").replace("SENTIMENT_", ""),
+                                        fontSize = 8.sp,
+                                        fontWeight = FontWeight.Bold,
                                         color = if (ruleCondition == cond) BackgroundDark else TextMuted
                                     )
                                 }
                             }
                         }
                     }
-
+                }
                     // Row 3: Inputs for Threshold and Amount
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -2454,7 +2506,7 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        tradingRules.forEach { rule ->
+                        tradingRules.forEach { rule: AITradingRule ->
                             val assetPrice = currentBalances.find { it.symbol == rule.assetSymbol }?.displayPriceUsd() ?: 0.0
                             val isPriceTrigger = rule.triggerCondition.startsWith("PRICE")
 
@@ -2540,7 +2592,7 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
                                                 uncheckedThumbColor = TextMuted,
                                                 uncheckedTrackColor = CardDark
                                             )
-                                        )
+)
                                         IconButton(
                                             onClick = { viewModel.deleteTradingRule(rule.id) }
                                         ) {
@@ -2555,7 +2607,6 @@ fun AiAgentScreen(viewModel: WalletViewModel) {
             }
         }
     }
-}
 
 // --- PRICE ALERTS SCREEN ---
 @Composable
@@ -2969,5 +3020,16 @@ fun QuickActionButton(
             letterSpacing = 0.5.sp
         )
     }
+}
+
+fun maskPrivateKey(key: String): String {
+    if (key.length <= 8) return "********"
+    return "${key.substring(0, 4)}...${key.substring(key.length - 4)}"
+}
+
+fun maskMnemonicWord(word: String, index: Int, totalWords: Int): String {
+    if (totalWords != 12) return word
+    if (index == 0 || index == totalWords - 1) return word
+    return "******"
 }
 
