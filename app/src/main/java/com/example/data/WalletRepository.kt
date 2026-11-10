@@ -3,6 +3,7 @@ package com.example.data
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 import java.security.KeyStore
 import java.util.UUID
@@ -186,6 +187,11 @@ class WalletRepository(private val dao: WalletDao) {
     // --- DB Mutations ---
     suspend fun saveBalances(balances: List<AssetBalance>) {
         dao.insertAssetBalances(balances)
+    }
+
+    @Transaction
+    suspend fun saveBalancesInTransaction(balances: List<AssetBalance>) {
+        dao.saveBalancesInTransaction(balances)
     }
 
     suspend fun saveBalance(balance: AssetBalance) {

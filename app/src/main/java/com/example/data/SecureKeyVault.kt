@@ -62,7 +62,8 @@ object SecureKeyVault {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            // Log error without printStackTrace for production
+            throw IllegalStateException("Failed to initialize hardware-backed keystore", e)
         }
     }
 

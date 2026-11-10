@@ -15,6 +15,11 @@ interface WalletDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAssetBalances(balances: List<AssetBalance>)
 
+    @Transaction
+    suspend fun saveBalancesInTransaction(balances: List<AssetBalance>) {
+        insertAssetBalances(balances)
+    }
+
     // --- Transactions ---
     @Query("SELECT * FROM crypto_transactions ORDER BY timestamp DESC")
     fun getTransactions(): Flow<List<CryptoTransaction>>

@@ -48,10 +48,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.data.*
+import com.example.data.WalletViewModel
 import com.example.data.AssetBalance
+import com.example.data.AITradingRule
 import com.example.data.formatMinorUnits
 import com.example.data.formatUsdMinorUnits
+import com.example.data.AssetDecimals
+import com.example.data.*
 import com.example.ui.theme.*
 import java.io.File
 import java.io.FileOutputStream
@@ -610,11 +613,8 @@ fun DashboardScreen(viewModel: WalletViewModel) {
     val context = LocalContext.current
 
     // Calculate totals (read-only display values derived from integer minor-unit storage)
-    val totalBalance = assets.sumOf { it.displayValueUsd() }
-    val totalBalance24hAgo = assets.sumOf {
-        val balanceVal = it.displayValueUsd()
-        balanceVal / (1 + (it.priceChange24h / 100))
-    }
+    val totalBalance = assets.sumOf { it.displayValueUsd().toDouble() }
+    val totalBalance24hAgo = assets.sumOf { (it.displayValueUsd().toDouble()) / (1 + (it.priceChange24h / 100)) }
     val totalDeltaPercentage = if (totalBalance24hAgo > 0) {
         ((totalBalance - totalBalance24hAgo) / totalBalance24hAgo) * 100
     } else 0.0
@@ -1605,7 +1605,7 @@ fun generatePdfTaxReport(context: Context) {
 
         Toast.makeText(context, "Tax Report Saved: ${file.absolutePath}", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
-        e.printStackTrace()
+        // Log error without printStackTrace for production
         Toast.makeText(context, "PDF Generation Failed: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }

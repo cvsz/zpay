@@ -19,7 +19,9 @@ data class AssetBalance(
     /** Price per whole unit in USD minor units (cents). */
     val priceUsdMinorUnit: Long,
     val priceChange24h: Double,
-    val lastUpdated: Long = System.currentTimeMillis()
+    val lastUpdated: Long = System.currentTimeMillis(),
+    /** Optimistic-lock version for concurrent updates. */
+    val version: Long = 0
 )
 
 /**

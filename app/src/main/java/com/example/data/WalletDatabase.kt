@@ -9,7 +9,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [AssetBalance::class, CryptoTransaction::class, PriceAlert::class, EncryptedKey::class, AITradingRule::class],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class WalletDatabase : RoomDatabase() {
@@ -161,6 +161,13 @@ abstract class WalletDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Migration from v2 to v3: add version column for optimistic locking on asset_balances
+                database.execSQL("ALTER TABLE `asset_balances` ADD COLUMN `version` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
         fun getDatabase(context: Context): WalletDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -168,7 +175,7 @@ abstract class WalletDatabase : RoomDatabase() {
                     WalletDatabase::class.java,
                     "apex_wallet_database"
                 )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 INSTANCE = instance
                 instance

@@ -363,10 +363,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
 
             val toAsset = currentBalances.find { it.chain == toChain && it.symbol == toSymbol }
 
-            // Debit source atomically.
-            repository.saveBalance(fromAsset.copy(balanceMinorUnit = fromAsset.balanceMinorUnit - amountMinorUnit))
-
-            // Credit destination using current USD prices (minor units).
+            // Calculate received amount before atomic update.
             val receivedMinorUnit = if (toAsset != null && fromAsset.priceUsdMinorUnit > 0 && toAsset.priceUsdMinorUnit > 0) {
                 amountMinorUnit * fromAsset.priceUsdMinorUnit / toAsset.priceUsdMinorUnit
             } else if (fromSymbol == "ETH" && toSymbol == "BNB") {
@@ -374,9 +371,13 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
             } else {
                 amountMinorUnit
             }
-            if (toAsset != null) {
-                repository.saveBalance(toAsset.copy(balanceMinorUnit = toAsset.balanceMinorUnit + receivedMinorUnit))
-            }
+
+            // Debit source and credit destination atomically using @Transaction.
+            val updatedFromAsset = fromAsset.copy(balanceMinorUnit = fromAsset.balanceMinorUnit - amountMinorUnit)
+            val updatedToAsset = toAsset?.copy(balanceMinorUnit = toAsset.balanceMinorUnit + receivedMinorUnit)
+            val updatedBalances = mutableListOf<AssetBalance>(updatedFromAsset)
+            if (updatedToAsset != null) updatedBalances.add(updatedToAsset)
+            repository.saveBalancesInTransaction(updatedBalances)
 
             // Idempotent transaction log (replay-safe).
             val idempotencyKey = "bridge-${fromChain}-${toChain}-${UUID.randomUUID()}"
