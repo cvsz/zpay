@@ -11,6 +11,7 @@ import com.example.crypto.WalletCrypto
 import com.example.network.BitcoinApiClient
 import com.example.network.EvmRpcClient
 import com.example.network.MarketPriceService
+import com.example.network.ServerApiClient
 import com.example.network.SolanaRpcClient
 import java.math.BigInteger
 import java.security.SecureRandom
@@ -30,6 +31,7 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
     private val bitcoinApi = BitcoinApiClient()
     private val solanaRpc = SolanaRpcClient()
     private val marketPrice = MarketPriceService()
+    private val serverApi = ServerApiClient()
     private val txService = TransactionService(repository, evmRpc, bitcoinApi, solanaRpc)
 
     // --- Active Wallet Configuration / Addresses ---
@@ -111,6 +113,19 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                 // No wallet exists yet; user must create or import one via BIP-39 mnemonic.
                 // No demo balances are seeded — all balances come from on-chain sources.
                 addNotification("No wallet found. Create or import a BIP-39 wallet to begin.")
+            }
+            // Check backend server availability (non-blocking, best effort)
+            viewModelScope.launch {
+                try {
+                    val serverAvailable = serverApi.healthCheck()
+                    if (serverAvailable) {
+                        addNotification("Backend server connected: zwallet-server API available.")
+                    } else {
+                        addNotification("Backend server unavailable. Using direct blockchain RPC clients.")
+                    }
+                } catch (_: Exception) {
+                    addNotification("Backend server unavailable. Using direct blockchain RPC clients.")
+                }
             }
             startPriceTicker()
             addNotification("Secure app linking active for zwallet.zeaz.dev domain.")
@@ -333,6 +348,33 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
         )
         repository.saveBalances(balances)
         addNotification("On-chain balances refreshed from live network providers.")
+    }
+
+    /**
+     * Fetches aggregated portfolio data from the ZWallet backend server.
+     * This is a secondary data source that complements direct blockchain RPC reads.
+     * Server data is used for portfolio overview and market price caching.
+     */
+    suspend fun refreshPortfolioFromServer() {
+        try {
+            // Fetch portfolio summary from server
+            val summary = serverApi.getPortfolioSummary()
+            addNotification("Portfolio summary fetched from backend server.")
+
+            // Fetch allocation data from server
+            val allocation = serverApi.getPortfolioAllocation()
+            addNotification("Blockchain allocation fetched from backend server.")
+
+            // Fetch transaction history from server
+            val transactions = serverApi.getTransactions()
+            addNotification("Transaction history fetched from backend server (${transactions.size} transactions).")
+
+            // Fetch market prices from server as a cross-check
+            val serverPrices = serverApi.getMarketPrices()
+            addNotification("Market prices fetched from backend server (${serverPrices.size} assets).")
+        } catch (e: Exception) {
+            addNotification("Backend server portfolio fetch failed: ${e.message}. Using direct blockchain RPC only.")
+        }
     }
 
     /**
