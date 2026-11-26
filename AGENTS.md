@@ -27,6 +27,21 @@ You are an expert Full-Stack Web3 Architect, Senior Mobile Developer, and Securi
 - `BitcoinApiClient.kt` — mempool.space REST API client (balance, UTXOs, fees, broadcast)
 - `SolanaRpcClient.kt` — Solana JSON-RPC client (balance, blockhash, signature status, broadcast)
 - `MarketPriceService.kt` — CoinGecko market data (USD prices, 24h change)
+- `ServerApiClient.kt` — Backend server API client (portfolio history, allocation, summary, market prices, transactions)
+
+### Backend Server (`web-dashboard/`)
+- `server.js` — Express backend with REST endpoints:
+  - GET /api/health - health check
+  - GET /api/portfolio/history - portfolio history by timeframe
+  - GET /api/portfolio/allocation - blockchain asset allocation
+  - GET /api/portfolio/summary - portfolio totals
+  - GET /api/market/prices - market prices from server
+  - GET /api/transactions - transaction history
+- `package.json` — Express, CORS, Helmet, dotenv dependencies
+
+### CI/CD (`.github/workflows/`)
+- `android-ci.yml` — Android unit tests, lint, debug build on PR/push
+- `release.yml` — Tag-based release pipeline (v* tags), signed APK, GitHub Release
 
 ### Data Layer (`app/src/main/java/com/example/data/`)
 - `WalletEntities.kt` — BigInteger exact financial arithmetic, transaction state machine

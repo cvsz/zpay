@@ -702,7 +702,13 @@ class WalletViewModel(application: Application) : AndroidViewModel(application) 
                             ?.priceUsdMinorUnit ?: asset.priceUsdMinorUnit
                         asset.copy(priceUsdMinorUnit = newPrice)
                     }
-                    repository.saveBalances(updated)
+                    // Only write if prices actually changed
+                    val hasChanges = currentBalances.zip(updated) { old, new ->
+                        old.priceUsdMinorUnit != new.priceUsdMinorUnit
+                    }.any { it }
+                    if (hasChanges) {
+                        repository.saveBalances(updated)
+                    }
                 } catch (e: Exception) {
                     // Network transient; retry next cycle
                 }
