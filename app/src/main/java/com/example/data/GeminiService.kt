@@ -124,23 +124,28 @@ object GeminiService {
 
     /**
      * Rebalances a user portfolio using AI agent algorithmic execution advice.
+     * All amounts are Long minor units (wei/satoshi/lamports) — no floating-point.
      */
     suspend fun rebalancePortfolio(
-        btcBalance: Double, btcValue: Double,
-        ethBalance: Double, ethValue: Double,
-        solBalance: Double, solValue: Double,
-        bnbBalance: Double, bnbValue: Double,
+        btcBalanceMinorUnit: Long,
+        btcValueUsdMinorUnit: Long,
+        ethBalanceMinorUnit: Long,
+        ethValueUsdMinorUnit: Long,
+        solBalanceMinorUnit: Long,
+        solValueUsdMinorUnit: Long,
+        bnbBalanceMinorUnit: Long,
+        bnbValueUsdMinorUnit: Long,
         riskLevel: String // "Conservative", "Balanced", "Aggressive"
     ): String {
         val systemInstruction = "You are an elite AI algorithmic trading agent specialized in portfolio rebalancing and risk mitigation on-chain."
         val prompt = """
             Provide a professional algorithmic portfolio rebalancing strategy based on these assets and a '$riskLevel' investor profile:
             
-            Current Holdings:
-            - Bitcoin (BTC): $btcBalance BTC (~$${String.format("%.2f", btcValue)})
-            - Ethereum (ETH): $ethBalance ETH (~$${String.format("%.2f", ethValue)})
-            - Solana (SOL): $solBalance SOL (~$${String.format("%.2f", solValue)})
-            - BNB: $bnbBalance BNB (~$${String.format("%.2f", bnbValue)})
+            Current Holdings (all amounts in minor units; value in USD minor units/cents):
+            - Bitcoin (BTC): $btcBalanceMinorUnit (~$${formatUsd(btcValueUsdMinorUnit)})
+            - Ethereum (ETH): $ethBalanceMinorUnit (~$${formatUsd(ethValueUsdMinorUnit)})
+            - Solana (SOL): $solBalanceMinorUnit (~$${formatUsd(solValueUsdMinorUnit)})
+            - BNB: $bnbBalanceMinorUnit (~$${formatUsd(bnbValueUsdMinorUnit)})
             
             Deliver a direct rebalancing action plan:
             1. Recommend allocation target percentages for BTC, ETH, SOL, BNB under '$riskLevel' logic.
@@ -151,5 +156,11 @@ object GeminiService {
         """.trimIndent()
 
         return generateText(prompt, systemInstruction)
+    }
+
+    /** Formats USD minor units (cents) as a dollar string with 2 decimals. */
+    private fun formatUsd(minorUnit: Long): String {
+        val dollars = minorUnit / 100.0
+        return java.lang.String.format("%.2f", dollars)
     }
 }

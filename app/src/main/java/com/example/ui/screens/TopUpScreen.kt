@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import java.util.UUID
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -37,7 +38,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.AssetDecimals
 import com.example.data.WalletViewModel
+import com.example.data.formatMinorUnits
 import com.example.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -66,8 +69,9 @@ fun TopUpScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
     var isProcessing by remember { mutableStateOf(false) }
     var processingStage by remember { mutableStateOf("") }
     var topupSuccess by remember { mutableStateOf(false) }
-    var successCryptoAmount by remember { mutableStateOf(0.0) }
-    var successFiatAmount by remember { mutableStateOf(0.0) }
+    var successCryptoAmount by remember { mutableStateOf(0L) }
+    var successTxHash by remember { mutableStateOf("") }
+    var txHashInput by remember { mutableStateOf("") }
 
     // Constants for conversion (1 USD = 35 THB approximately)
     val thbToUsdRate = 1.0 / 35.0
@@ -83,6 +87,7 @@ fun TopUpScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
     val currentUsdAmount = currentFiatAmount * thbToUsdRate
     val assetPrice = assetPrices[selectedAsset] ?: 1.0
     val calculatedCryptoAmount = if (assetPrice > 0) currentUsdAmount / assetPrice else 0.0
+    val calculatedCryptoAmountMinorUnit = (calculatedCryptoAmount * Math.pow(10.0, AssetDecimals.decimals(selectedAsset).toDouble())).toLong()
 
     // Card detector logic
     LaunchedEffect(cardNumber) {
@@ -433,13 +438,13 @@ fun TopUpScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                                             processingStage = "Finalizing Crypto Minting..."
                                             delay(1000)
                                             isProcessing = false
-                                            successCryptoAmount = calculatedCryptoAmount
-                                            successFiatAmount = currentFiatAmount
+                                            successCryptoAmount = calculatedCryptoAmountMinorUnit
+                                            successTxHash = txHashInput
                                             viewModel.performTopUp(
                                                 symbol = selectedAsset,
-                                                cryptoAmount = calculatedCryptoAmount,
-                                                fiatAmount = currentFiatAmount,
-                                                paymentMethod = "PromptPay"
+                                                cryptoAmountMinorUnit = calculatedCryptoAmountMinorUnit,
+                                                txHash = txHashInput,
+                                                idempotencyKey = "topup-${selectedAsset}-${UUID.randomUUID()}"
                                             )
                                             topupSuccess = true
                                         }
@@ -471,13 +476,13 @@ fun TopUpScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                                             processingStage = "Encrypting Settlement..."
                                             delay(1000)
                                             isProcessing = false
-                                            successCryptoAmount = calculatedCryptoAmount
-                                            successFiatAmount = currentFiatAmount
+                                            successCryptoAmount = calculatedCryptoAmountMinorUnit
+                                            successTxHash = txHashInput
                                             viewModel.performTopUp(
                                                 symbol = selectedAsset,
-                                                cryptoAmount = calculatedCryptoAmount,
-                                                fiatAmount = currentFiatAmount,
-                                                paymentMethod = "Card"
+                                                cryptoAmountMinorUnit = calculatedCryptoAmountMinorUnit,
+                                                txHash = txHashInput,
+                                                idempotencyKey = "topup-${selectedAsset}-${UUID.randomUUID()}"
                                             )
                                             topupSuccess = true
                                         }
@@ -499,13 +504,13 @@ fun TopUpScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                                             processingStage = "Completing balance transfer..."
                                             delay(1200)
                                             isProcessing = false
-                                            successCryptoAmount = calculatedCryptoAmount
-                                            successFiatAmount = currentFiatAmount
+                                            successCryptoAmount = calculatedCryptoAmountMinorUnit
+                                            successTxHash = txHashInput
                                             viewModel.performTopUp(
                                                 symbol = selectedAsset,
-                                                cryptoAmount = calculatedCryptoAmount,
-                                                fiatAmount = currentFiatAmount,
-                                                paymentMethod = "Crypto"
+                                                cryptoAmountMinorUnit = calculatedCryptoAmountMinorUnit,
+                                                txHash = txHashInput,
+                                                idempotencyKey = "topup-${selectedAsset}-${UUID.randomUUID()}"
                                             )
                                             topupSuccess = true
                                         }
@@ -519,12 +524,13 @@ fun TopUpScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                 // SUCCESS SCREEN
                 TopUpSuccessComponent(
                     cryptoAmount = successCryptoAmount,
-                    fiatAmount = successFiatAmount,
+                    txHash = successTxHash,
                     symbol = selectedAsset,
-                    paymentMethod = when (selectedTab) {
-                        "PROMPTPAY" -> "PromptPay QR"
-                        "CARD" -> "Visa/Mastercard"
-                        else -> "Crypto Network"
+                    network = when (selectedAsset) {
+                        "BTC" -> "Bitcoin"
+                        "ETH" -> "Ethereum"
+                        "SOL" -> "Solana"
+                        else -> "BSC"
                     },
                     onBack = {
                         topupSuccess = false
@@ -532,6 +538,7 @@ fun TopUpScreen(viewModel: WalletViewModel, onBack: () -> Unit) {
                         cardExpiry = ""
                         cardCvv = ""
                         cardHolder = ""
+                        txHashInput = ""
                         onBack()
                     }
                 )
@@ -1164,10 +1171,10 @@ fun CryptoTransferPanel(
 
 @Composable
 fun TopUpSuccessComponent(
-    cryptoAmount: Double,
-    fiatAmount: Double,
+    cryptoAmount: Long,
+    txHash: String,
     symbol: String,
-    paymentMethod: String,
+    network: String,
     onBack: () -> Unit
 ) {
     Column(
@@ -1214,7 +1221,7 @@ fun TopUpSuccessComponent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "+${String.format("%.6f", cryptoAmount)} $symbol",
+            text = "+${formatMinorUnits(cryptoAmount, symbol)} $symbol",
             fontSize = 32.sp,
             fontWeight = FontWeight.Light,
             color = TextWhite,
@@ -1225,7 +1232,7 @@ fun TopUpSuccessComponent(
         Spacer(modifier = Modifier.height(6.dp))
 
         Text(
-            text = "Settled via $paymentMethod: ฿${String.format("%,.2f", fiatAmount)} THB",
+            text = "Settled via $network: tx $txHash",
             fontSize = 13.sp,
             color = TextMuted
         )
@@ -1268,7 +1275,7 @@ fun TopUpSuccessComponent(
                 ) {
                     Text("Transaction ID", fontSize = 11.sp, color = TextMuted)
                     Text(
-                        text = "tx_" + java.util.UUID.randomUUID().toString().substring(0, 16),
+                        text = txHash.ifEmpty { "pending" },
                         fontSize = 11.sp,
                         color = TextWhite,
                         fontFamily = FontFamily.Monospace
