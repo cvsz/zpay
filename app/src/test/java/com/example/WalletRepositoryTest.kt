@@ -213,4 +213,94 @@ class WalletRepositoryTest {
         assertEquals(TransactionStatus.SUCCESS, storedTx(tx.id).status)
         assertTrue(TransactionStateMachine.isTerminal(storedTx(tx.id).status))
     }
+
+    // --- Additional edge-case coverage ---
+
+    @Test
+    fun `validatePayment rejects blank symbol`() {
+        var threw = false
+        try { repo.validatePayment("", 1000) } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
+
+    @Test
+    fun `validatePayment rejects amount at platform maximum boundary`() {
+        // exactly at max is allowed
+        repo.validatePayment("BTC", 1_000_000_000_000L)
+        // one over max is rejected
+        var threw = false
+        try { repo.validatePayment("BTC", 1_000_000_000_001L) } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
+
+    @Test
+    fun `validatePayment rejects negative fee`() {
+        var threw = false
+        try { repo.validatePayment("BTC", 1000, -1) } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
+
+    @Test
+    fun `createPaymentIdempotent rejects amount exceeding maximum`() = runBlocking {
+        var threw = false
+        try {
+            repo.createPaymentIdempotent(
+                chain = "BTC", hash = "0xabc", type = "Receive",
+                fromAddress = "0xfrom", toAddress = "0xto",
+                amountMinorUnit = 1_000_000_000_001L,
+                feeUsdMinorUnit = 0,
+                idempotencyKey = UUID.randomUUID().toString()
+            )
+        } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
+
+    @Test
+    fun `createPaymentIdempotent rejects negative fee`() = runBlocking {
+        var threw = false
+        try {
+            repo.createPaymentIdempotent(
+                chain = "BTC", hash = "0xabc", type = "Receive",
+                fromAddress = "0xfrom", toAddress = "0xto",
+                amountMinorUnit = 1000, feeUsdMinorUnit = -5,
+                idempotencyKey = UUID.randomUUID().toString()
+            )
+        } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
+
+    @Test
+    fun `createPaymentIdempotent distinct keys create distinct transactions`() = runBlocking {
+        val k1 = UUID.randomUUID().toString()
+        val k2 = UUID.randomUUID().toString()
+        val t1 = repo.createPaymentIdempotent(
+            chain = "BTC", hash = "0xabc", type = "Receive",
+            fromAddress = "0xfrom", toAddress = "0xto",
+            amountMinorUnit = 1000, feeUsdMinorUnit = 100,
+            idempotencyKey = k1
+        )
+        val t2 = repo.createPaymentIdempotent(
+            chain = "ETH", hash = "0xdef", type = "Receive",
+            fromAddress = "0xfrom", toAddress = "0xto",
+            amountMinorUnit = 2000, feeUsdMinorUnit = 200,
+            idempotencyKey = k2
+        )
+        assertNotEquals(t1.id, t2.id)
+        assertNotEquals(k1, k2)
+        assertEquals(1000L, t1.amountMinorUnit)
+        assertEquals(2000L, t2.amountMinorUnit)
+    }
+
+    @Test
+    fun `settleTransaction rejects unknown status`() = runBlocking {
+        val tx = repo.createPaymentIdempotent(
+            chain = "BTC", hash = "0xabc", type = "Receive",
+            fromAddress = "0xfrom", toAddress = "0xto",
+            amountMinorUnit = 1000, feeUsdMinorUnit = 100,
+            idempotencyKey = UUID.randomUUID().toString()
+        )
+        var threw = false
+        try { repo.settleTransaction(tx.id, "NOT_A_STATUS") } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
 }

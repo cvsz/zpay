@@ -110,4 +110,53 @@ class WalletCryptoTest {
         assertTrue(hex.startsWith("0x"))
         assertTrue(data.contentEquals(WalletCrypto.unhex(hex)))
     }
+
+    // --- Additional edge-case coverage ---
+
+    @Test
+    fun parseDerivationPath_rejectsInvalidPath() {
+        var threw = false
+        try { WalletCrypto.parseDerivationPath("invalid") } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+
+        threw = false
+        try { WalletCrypto.parseDerivationPath("m/44'/0'/-1/0") } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+
+        val valid = WalletCrypto.parseDerivationPath("m/44'/60'/0'/0/0")
+        assertEquals(5, valid.size)
+    }
+
+    @Test
+    fun bitcoinAddress_requiresCompressedPublicKey() {
+        var threw = false
+        try { WalletCrypto.bitcoinAddress(ByteArray(32)) } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
+
+    @Test
+    fun solanaAddress_requires32BytePublicKey() {
+        var threw = false
+        try { WalletCrypto.solanaAddress(ByteArray(31)) } catch (e: IllegalArgumentException) { threw = true }
+        assertTrue(threw)
+    }
+
+    @Test
+    fun isValidMnemonic_rejectsWrongWordCount() {
+        assertFalse(WalletCrypto.isValidMnemonic("abandon abandon abandon")) // 3 words
+        assertFalse(WalletCrypto.isValidMnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon")) // 11 words
+    }
+
+    @Test
+    fun signHashLowS_isCanonicalLowS() {
+        val mnemonic = WalletCrypto.generateMnemonic(128)
+        val seed = WalletCrypto.mnemonicToSeed(mnemonic)
+        val keyPair = WalletCrypto.deriveSecp256k1(seed, WalletCrypto.BTC_DERIVATION_PATH)
+        val hash = WalletCrypto.keccak256("test".toByteArray())
+        val sig = WalletCrypto.signHashLowS(hash, keyPair.privateKey)
+        // DER sequence: 0x30 <len> 0x02 <len> <r> 0x02 <len> <s> <sighash>
+        assertTrue(sig.size >= 8)
+        assertEquals(0x30.toByte(), sig.first()) // DER SEQUENCE tag
+        assertEquals(0x01.toByte(), sig.last()) // sighash type ALL
+    }
 }
