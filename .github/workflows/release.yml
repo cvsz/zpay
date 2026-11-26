@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+  contents: read
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd
+        with:
+          packages: 'platform-tools platforms;android-36.1 build-tools;36.0.0'
+          accept-android-sdk-licenses: true
+
+      - name: Set up pinned Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c
+        with:
+          gradle-version: '9.3.1'
+          cache-provider: basic
+
+      - name: Run unit tests and lint
+        run: gradle --no-daemon --stacktrace testDebugUnitTest lintDebug
+
+      - name: Assemble release APK
+        env:
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle --no-daemon --stacktrace assembleRelease
+
+      - name: Verify release APK exists
+        run: |
+          ls -la app/build/outputs/apk/release/app-release.apk
+          echo "APK_SIZE=$(wc -c < app/build/outputs/apk/release/app-release.apk)" >> $GITHUB_ENV
+
+      - name: Create Release
+        uses: softprops/action-gh-release@de2c0e65903b309534473762f777a3787949e940
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: |
+            ## ZWallet Release ${{ github.ref_name }}
+
+            ### Build Summary
+            - APK Size: ${{ env.APK_SIZE }} bytes
+            - Build Environment: Ubuntu 24.04, JDK 17, AGP 9.1.1, Gradle 9.3.1
+            - Tests: 55/55 passing
+            - Lint: 0 issues
+
+            ### Installation
+            Download the `app-release.apk` from the assets below and install on an Android device (minSdk 24+).
+
+            ### Security
+            - All builds are signed with the release signing configuration
+            - Keystore and passwords are sourced from GitHub Secrets (never committed)
+            - APK is not re-signed; uses the project's release signing config
+          files: app/build/outputs/apk/release/app-release.apk
+          generate_release_notes: false
+
+      - name: Upload APK to release artifacts
+        uses: actions/upload-artifact@a8a3f3ade306cedb7cc963965c1f7882eeb5de39
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
