@@ -86,6 +86,15 @@ object WalletCrypto {
         return Bip32ECKeyPair.deriveKeyPair(master, parseDerivationPath(path))
     }
 
+    /** Builds an ECKeyPair from a raw secp256k1 private key scalar. */
+    fun keyPairFromPrivateKey(privateKey: BigInteger): ECKeyPair {
+        val encoded = secpDomain.g.multiply(privateKey).normalize().getEncoded(true)
+        // Compressed format: 0x02/0x03 + 32-byte X coordinate
+        val pubX = ByteArray(32)
+        System.arraycopy(encoded, 1, pubX, 0, 32)
+        return org.web3j.crypto.ECKeyPair(privateKey, BigInteger(1, pubX))
+    }
+
     /** Derives ed25519 key pair via SLIP-0010 (hardened-only). */
     fun deriveEd25519(seed: ByteArray, path: String): Ed25519KeyPair {
         val indices = parseDerivationPath(path)

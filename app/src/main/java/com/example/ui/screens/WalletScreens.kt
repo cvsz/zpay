@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.animation.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import androidx.lifecycle.viewModelScope
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -1692,7 +1693,7 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
                                     toChain = fallback
                                     toAsset = chainAssets[fallback] ?: "ETH"
                                 }
-                                viewModel.refreshGasEstimation(chain)
+                                viewModel.viewModelScope.launch { viewModel.refreshGasEstimation(chain) }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) ElectricEmerald else BackgroundDark),
                             shape = RoundedCornerShape(8.dp),
@@ -1787,7 +1788,7 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
                                     val fallback = chains.find { it != chain } ?: "Ethereum"
                                     fromChain = fallback
                                     fromAsset = chainAssets[fallback] ?: "ETH"
-                                    viewModel.refreshGasEstimation(fallback)
+                                    viewModel.viewModelScope.launch { viewModel.refreshGasEstimation(fallback) }
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) CosmicCyan else BackgroundDark),
@@ -1861,7 +1862,7 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("GAS FEE ESTIMATION & ROUTING", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
-                    IconButton(onClick = { viewModel.refreshGasEstimation(fromChain) }) {
+                    IconButton(onClick = { viewModel.viewModelScope.launch { viewModel.refreshGasEstimation(fromChain) } }) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = "Refresh Gas", tint = ElectricEmerald, modifier = Modifier.size(16.dp))
                     }
                 }
@@ -1909,7 +1910,7 @@ fun BridgeSwapScreen(viewModel: WalletViewModel) {
                 val amtValue = amountText.toDoubleOrNull() ?: 1.0
                 val decimals = AssetDecimals.decimals(fromAsset)
                 val amtMinorUnit = (amtValue * Math.pow(10.0, decimals.toDouble())).toLong()
-                viewModel.executeBridgeSwap(fromChain, toChain, fromAsset, toAsset, amtMinorUnit)
+                viewModel.viewModelScope.launch { viewModel.executeBridgeSwap(fromChain, toChain, fromAsset, toAsset, amtMinorUnit) }
             },
             modifier = Modifier
                 .fillMaxWidth()
