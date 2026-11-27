@@ -52,7 +52,7 @@ abstract class WalletDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
 
-                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_crypto_transactions_new_idempotencyKey` ON `crypto_transactions_new` (`idempotencyKey`)")
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_crypto_transactions_idempotencyKey` ON `crypto_transactions_new` (`idempotencyKey`)")
 
                 database.execSQL("""
                     CREATE TABLE IF NOT EXISTS `price_alerts_new` (
