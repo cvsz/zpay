@@ -185,7 +185,18 @@ class WalletRepository(private val dao: WalletDao) {
     }
 
     // --- DB Mutations ---
+    
+    private fun validateAssetRange(balance: AssetBalance) {
+        if (balance.symbol == "ETH" || balance.symbol == "BNB") {
+            // Long.MAX_VALUE is ~9.22 * 10^18. Prevent overflow for EVM assets.
+            if (balance.balanceMinorUnit < 0) {
+                throw IllegalArgumentException("Asset balance overflow or invalid negative balance for ${balance.symbol}")
+            }
+        }
+    }
+    
     suspend fun saveBalances(balances: List<AssetBalance>) {
+        balances.forEach { validateAssetRange(it) }
         dao.insertAssetBalances(balances)
     }
 
@@ -195,6 +206,7 @@ class WalletRepository(private val dao: WalletDao) {
     }
 
     suspend fun saveBalance(balance: AssetBalance) {
+        validateAssetRange(balance)
         dao.insertAssetBalance(balance)
     }
 
